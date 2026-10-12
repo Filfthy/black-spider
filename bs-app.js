@@ -749,7 +749,7 @@ class GameController {
           await wait(k * 90);
           const from = s === 0 ? fromMine[k] : this.seatHandCenter(s);
           const dest = to === 0 ? getRectCenter(this.dom.playerHand) : this.seatHandCenter(to);
-          await this.flyCard({ card: s === 0 || to === 0 ? card : null, from, to: dest, dur: 650,
+          await this.flyCard({ card: null, from, to: dest, dur: 650,   // (passed cards travel face down)
             scaleFrom: s === 0 ? 1 : OPP_CARD_SCALE, scaleTo: to === 0 ? 1 : OPP_CARD_SCALE,
             rotFrom: this.seatAngle(s), rotTo: this.seatAngle(to) });
         })());
