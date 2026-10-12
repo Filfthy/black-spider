@@ -2,7 +2,7 @@
 // (No DOM element lookups and no AI here. Layout helpers are shared with Oh Hell.)
 //
 // 60 cards: red, blue, purple and green, each numbered 1-11, and black 1-11 plus five more black 7s - six Black
-// Spiders. Everyone passes 3 cards, then tricks: follow the card led by its colour OR its number if you can; the
+// Spiders. Everyone passes 3 cards, then tricks: follow the colour led if you can (a card of the same number may be played instead); the
 // highest card of the colour led wins (the first of equal cards). Taking points is bad: black 1-6 are 1, the Black
 // Spiders 10, black 8-11 2-5; the coloured 7s are -5 (good to take). Taking every black card ("the sweep") scores 0
 // and everyone else 60. Lowest total when someone reaches the target wins.
@@ -74,8 +74,14 @@ function shuffle(a) {
   return a;
 }
 
-// may this card be played to a trick led by `lead`? (matches its colour or its number)
+// Following: if you have the colour led you must play that colour - or, instead, a card of the same number.
+// With none of the colour led, you may play anything (a matching number included).
 const follows = (c, lead) => c.suit === lead.suit || c.rank === lead.rank;
+function followIndices(cards, lead) {
+  const all = cards.map((_, i) => i);
+  if (!cards.some(c => c.suit === lead.suit)) return all;
+  return all.filter(i => follows(cards[i], lead));
+}
 // which play wins: the highest of the colour led; of equal cards (the Black Spiders), the first played
 function trickWinnerIndex(cards) {
   const lead = cards[0];
@@ -194,8 +200,7 @@ class BlackSpiderGame {
       return all;
     }
     const lead = t.plays[0].card;
-    const ok = all.filter(i => follows(cards[i], lead));
-    return ok.length ? ok : all;
+    return followIndices(cards, lead);
   }
 
   playCard(seat, index) {

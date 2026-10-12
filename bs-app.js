@@ -971,7 +971,7 @@ class GameController {
       return;
     }
     const lead = g.currentTrick.plays[0].card;
-    this.showToast(`You must follow the ${cardName(lead)}: play a ${COLOUR_NAME[lead.suit]} card or a ${lead.rank}.`);
+    this.showToast(`You have ${COLOUR_NAME[lead.suit]}, so you must follow the ${cardName(lead)}: play a ${COLOUR_NAME[lead.suit]} card, or a ${lead.rank}.`);
   }
 
   async finishTrick(ep) {

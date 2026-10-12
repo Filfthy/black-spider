@@ -104,8 +104,7 @@ function playOut(g, handsIn, me, first) {
       if (tricksPlayed === 0) { const ok = all.filter(i => h[i].suit !== "K"); return ok.length ? ok : all; }
       return all;
     }
-    const ok = all.filter(i => follows(h[i], plays[0].card));
-    return ok.length ? ok : all;
+    return followIndices(h, plays[0].card);
   };
   let guard = 0;
   while (hands[me].length + plays.length > 0 && guard++ < 400) {
