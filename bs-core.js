@@ -1,7 +1,7 @@
 // bs-core.js - Black Spider: the rules (Black Spy), the card model, and the card faces.
 // (No DOM element lookups and no AI here. Layout helpers are shared with Oh Hell.)
 //
-// 60 cards: red, blue, yellow and green, each numbered 1-11, and black 1-11 plus five more black 7s - six Black
+// 60 cards: red, blue, purple and green, each numbered 1-11, and black 1-11 plus five more black 7s - six Black
 // Spiders. Everyone passes 3 cards, then tricks: follow the card led by its colour OR its number if you can; the
 // highest card of the colour led wins (the first of equal cards). Taking points is bad: black 1-6 are 1, the Black
 // Spiders 10, black 8-11 2-5; the coloured 7s are -5 (good to take). Taking every black card ("the sweep") scores 0
@@ -13,9 +13,9 @@ let BACK_CREASE_SEED = (Math.random() * 4294967296) >>> 0;
 let INFERNAL = true;   // (Oh Hell's switch; Black Spider is always in the Infernal style)
 
 // ===== Colours (the "suits") =====
-const COLOURS = ["R", "B", "Y", "G", "K"];
-const COLOUR_NAME = { R: "red", B: "blue", Y: "yellow", G: "green", K: "black" };
-const COLOUR_ORDER = { R: 0, Y: 1, G: 2, B: 3, K: 4 };   // your hand, left to right
+const COLOURS = ["R", "B", "P", "G", "K"];
+const COLOUR_NAME = { R: "red", B: "blue", P: "purple", G: "green", K: "black" };
+const COLOUR_ORDER = { R: 0, P: 1, G: 2, B: 3, K: 4 };   // your hand, left to right
 const RANKS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 // what each number shows (the placeholder pictures; the real art follows the same list)
 const SPIDER_POSE = ["", "Dangling", "Climbing", "Spinning", "Juggling", "Tightrope", "Trapeze",
@@ -35,7 +35,7 @@ const layoutMetrics = { scale: 1, cardWidth: BASE_CARD_WIDTH, cardHeight: BASE_C
 // ===== Model =====
 class Card {
   constructor(suit, rank, copy = 0) {
-    this.suit = suit;        // colour: R B Y G K
+    this.suit = suit;        // colour: R B P G K
     this.rank = rank;        // 1-11
     this.value = rank;
     this.copy = copy;        // the extra black 7s: 1-5
@@ -246,7 +246,7 @@ class BlackSpiderGame {
 }
 
 function parseCard(code) {
-  const m = /^([RBYGK])(\d+)([a-e]?)$/.exec(code);
+  const m = /^([RBPGK])(\d+)([a-e]?)$/.exec(code);
   return new Card(m[1], +m[2], m[3] ? m[3].charCodeAt(0) - 96 : 0);
 }
 
@@ -309,10 +309,10 @@ class CardView {
     corner.className = "corner bs-corner";
     corner.innerHTML = `<span class="rank">${card.rank}</span>` + (p ? `<span class="pts ${p > 0 ? "bad" : "good"}">${p > 0 ? p : "−" + -p}</span>` : "");
     div.appendChild(corner);
-    // the picture: placeholder spiders (index.html #sp-N), drawn in ink with the colour as their highlight
+    // the picture: for now one spider design for every number (img/spider-<colour>.webp, tools/make-spider-faces.py)
     const frame = document.createElement("div");
     frame.className = "inf-court bs-art";
-    frame.innerHTML = `<svg viewBox="0 0 100 140" aria-hidden="true"><use href="#sp-${card.rank}"/></svg>`;
+    frame.innerHTML = `<img src="img/spider-${COLOUR_NAME[card.suit]}.webp" alt="" draggable="false">`;
     div.appendChild(frame);
     return div;
   }

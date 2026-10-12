@@ -1,16 +1,16 @@
 /* bs.css - Black Spider's own look, on top of Oh Hell's gw.css + oh.css (always the Infernal style). */
 
 :root {
-  --c-red: #b3221c; --c-blue: #1f4fa3; --c-yellow: #b9840a; --c-green: #2c7a32; --c-black: #160e08;
+  --c-red: #b3221c; --c-blue: #16307a; --c-purple: #5e1f86; --c-green: #2c7a32; --c-black: #160e08;
   /* the pictures' highlight, per colour (the real art's magenta areas) */
-  --hl-red: #c8261e; --hl-blue: #2a5fc4; --hl-yellow: #e6ad18; --hl-green: #2f8f39; --hl-black: #cbbd9c;
+  --hl-red: #c8261e; --hl-blue: #16307a; --hl-purple: #6a2a96; --hl-green: #2f8f39; --hl-black: #cbbd9c;
 }
 
 /* ---------------------------------------------------------------- card faces */
 .card.bs-card { --hl: var(--hl-black); --ink: var(--c-black); }
 .card.bs-card.c-red    { --hl: var(--hl-red);    --ink: var(--c-red); }
 .card.bs-card.c-blue   { --hl: var(--hl-blue);   --ink: var(--c-blue); }
-.card.bs-card.c-yellow { --hl: var(--hl-yellow); --ink: var(--c-yellow); }
+.card.bs-card.c-purple { --hl: var(--hl-purple); --ink: var(--c-purple); }
 .card.bs-card.c-green  { --hl: var(--hl-green);  --ink: var(--c-green); }
 .card.bs-card.c-black  { --hl: var(--hl-black);  --ink: var(--c-black); }
 /* the number, and its points underneath (bad points in dark red, good in green) */
@@ -99,3 +99,7 @@ body[data-players="5"] #bid-panel { top: 51%; }
   #bid-panel #bid-note { display: none; }
   /* the cards you've picked rise well clear of the rest */
 }
+/* the spider picture (one design, recoloured): centred in the space right of the number, printed into the paper */
+.card.bs-card .bs-art { inset: 5% 4% 4% 4%; }
+.card.bs-card .bs-art img { position: static; width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+body.suits-infernal .card.bs-card .bs-art img { mix-blend-mode: normal; }

@@ -50,7 +50,7 @@ const PORTRAIT_VIEWS = {};
 // player count (see updateOppScale).
 let OPP_CARD_SCALE = 0.85;
 
-// your hand: by colour (red, yellow, green, blue, black), low to high
+// your hand: by colour (red, purple, green, blue, black), low to high
 
 // Game pace: 1 = normal, 0.5 = fast. Scales pauses and card flights.
 let GAME_SPEED = 1;
@@ -1775,7 +1775,7 @@ class GameController {
     top.append(seat("Lilith", "lilith", false, 11), seat("Ronnie", "ronnie", true, 0));
     const mid = document.createElement("div"); mid.className = "tc-mid";
     const hand = document.createElement("div"); hand.className = "tc-hand";
-    for (const code of ["R7", "Y11", "G3", "B9", "K7", "K2"]) hand.appendChild(this.cardView.createCardElement(parseCard(code)));
+    for (const code of ["R7", "P11", "G3", "B9", "K7", "K2"]) hand.appendChild(this.cardView.createCardElement(parseCard(code)));
     mid.append(hand);
     table.append(top, mid);
   }
@@ -2052,7 +2052,7 @@ window.addEventListener("resize", () => {
 // must match exactly what the cards and oh.css ask for (including any ?v=). The current style's art comes first.
 const CARD_ART_KEEP = [];
 function preloadCardArt() {
-  const list = [];
+  const list = ["red", "blue", "purple", "green", "black"].map(c => `img/spider-${c}.webp`);
   for (let i = 0; i < 8; i++) list.push(`img/parchment-card-${i}.webp`);
   list.push("img/parchment-card.webp?v=3");
   for (let i = 0; i < 8; i++) list.push(`img/crease-${i}.webp?v=2`);
