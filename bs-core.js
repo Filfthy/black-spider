@@ -314,10 +314,10 @@ class CardView {
     corner.className = "corner bs-corner";
     corner.innerHTML = `<span class="rank">${card.rank}</span>` + (p ? `<span class="pts ${p > 0 ? "bad" : "good"}">${p > 0 ? p : "−" + -p}</span>` : "");
     div.appendChild(corner);
-    // the picture: for now one spider design for every number (img/spider-<colour>.webp, tools/make-spider-faces.py)
+    // the picture: each number's own spider, in the card's colour (img/spider-<number>-<colour>.webp, tools/make-spider-faces.py)
     const frame = document.createElement("div");
     frame.className = "inf-court bs-art";
-    frame.innerHTML = `<img src="img/spider-${COLOUR_NAME[card.suit]}.webp" alt="" draggable="false">`;
+    frame.innerHTML = `<img src="img/spider-${card.rank}-${COLOUR_NAME[card.suit]}.webp" alt="" draggable="false">`;
     div.appendChild(frame);
     return div;
   }

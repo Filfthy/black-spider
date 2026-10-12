@@ -2052,7 +2052,8 @@ window.addEventListener("resize", () => {
 // must match exactly what the cards and oh.css ask for (including any ?v=). The current style's art comes first.
 const CARD_ART_KEEP = [];
 function preloadCardArt() {
-  const list = ["red", "blue", "purple", "green", "black"].map(c => `img/spider-${c}.webp`);
+  const list = [];
+  for (let n = 1; n <= 11; n++) for (const c of ["red", "blue", "purple", "green", "black"]) list.push(`img/spider-${n}-${c}.webp`);
   for (let i = 0; i < 8; i++) list.push(`img/parchment-card-${i}.webp`);
   list.push("img/parchment-card.webp?v=3");
   for (let i = 0; i < 8; i++) list.push(`img/crease-${i}.webp?v=2`);
