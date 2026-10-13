@@ -113,3 +113,10 @@ body.back-spider .card.back[data-crease]::after {
 }
 #end-panel:has(.taken-cell) { min-width: min(92vw, 560px); }
 .end-table .taken-cell { padding-right: 1.2em; }
+/* the title (art/black-spider-logo-inward-thread.png) */
+#splash .bs-logo-img { width: min(78vw, 820px); height: auto; max-height: 52vh; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7)); }
+#start-panel .bs-logo-img.start-title-img { width: min(100%, 26em); height: auto; max-height: 9em; object-fit: contain; }
+@media (orientation: landscape) and (max-height: 500px) {
+  #splash .bs-logo-img { max-height: 46vh; }
+  #start-panel .bs-logo-img.start-title-img { max-height: 4.5em; }
+}
