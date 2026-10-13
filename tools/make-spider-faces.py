@@ -8,11 +8,11 @@ import numpy as np
 from PIL import Image
 
 COLOURS = {   # body colour, and the outline colour (None: as drawn)
-    "red": ((150, 22, 24), None),
-    "blue": ((18, 36, 104), None),
-    "green": ((20, 80, 28), None),
-    "purple": ((66, 18, 96), None),
-    "black": ((34, 26, 22), None),
+    "red": ((156, 16, 22), None),
+    "blue": ((26, 52, 140), None),
+    "green": ((28, 112, 38), None),
+    "purple": ((92, 26, 134), None),
+    "black": ((46, 36, 30), None),
 }
 # which picture each number shows: creepy-crawlies rising in menace, and the 7 - the Black Spider's number - a spider
 PICTURES = {1: "fly", 2: "moth", 3: "earwig", 4: "cockroach", 5: "dragonfly", 6: "stag-beetle",
@@ -49,9 +49,9 @@ for num in range(1, 12):
 
     row = []
     for name, (body, rim) in COLOURS.items():
-        shade = np.clip(lum / red_lum, 0, 1.15)[..., None]     # keeps the body's own texture and shading
+        # the body's own texture and shading, deepened (as the red scorpion is drawn): a darker base, more contrast
+        shade = (np.clip(lum / red_lum, 0, 1.3) ** 1.6 * 0.68)[..., None]
         col = rgb.copy()
-        if name == "red": body = None
         if body: col = col * (1 - red[..., None]) + np.clip(np.array(body) * shade, 0, 255) * red[..., None]
         if rim:
             gl = (lum / max(1, float(np.median(lum[gold > 0.9]))))[..., None]
