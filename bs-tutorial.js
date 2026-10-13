@@ -35,7 +35,7 @@ const TUTORIAL = {
       passed: [
         { t: "Lilith passed you three cards: the ones lifted in your hand. She gave you some high cards, which are more likely to win tricks you don't want.", spot: "#player-hand" }
       ],
-      play0: { t: "Whoever has the <b>red 1</b> leads the first trick, and black may never lead it. That's you: play the red 1." },
+      play0: { t: "Whoever has the <b>red 1</b> leads it to the first trick. That's you: play the red 1." },
       trick0: [
         "If you have the colour that was led, you must follow it, though you may play a card of the <b>same number</b> instead. Persephone followed with red; Bub played a <b>green 1</b> instead, matching the number.",
         "The highest card <b>of the colour led</b> wins. Bub's green 1 could never win, as green wasn't led. Lilith's red 9 won, and she leads next."

@@ -967,7 +967,7 @@ class GameController {
     const g = this.game, c = g.hands[0].cards[idx];
     if (!c || g.phase !== "play") return;
     if (!g.currentTrick.plays.length) {
-      if (g.tricksPlayed === 0 && c.suit === "K") this.showToast("Black may not be led on the first trick.");
+      if (g.tricksPlayed === 0) this.showToast("You hold the red 1, so you lead it to the first trick.");
       return;
     }
     const lead = g.currentTrick.plays[0].card;

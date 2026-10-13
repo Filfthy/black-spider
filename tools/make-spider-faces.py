@@ -10,13 +10,28 @@ from PIL import Image
 COLOURS = {   # body colour, and the outline colour (None: as drawn)
     "red": ((150, 22, 24), None),
     "blue": ((18, 36, 104), None),
-    "green": ((36, 112, 44), None),
-    "purple": ((96, 30, 132), None),
+    "green": ((20, 80, 28), None),
+    "purple": ((66, 18, 96), None),
     "black": ((34, 26, 22), None),
 }
 # which picture each number shows: creepy-crawlies rising in menace, and the 7 - the Black Spider's number - a spider
 PICTURES = {1: "fly", 2: "moth", 3: "earwig", 4: "cockroach", 5: "dragonfly", 6: "stag-beetle",
             7: "s3", 8: "centipede", 9: "wasp", 10: "praying-mantis", 11: "scorpion"}
+# how big each sits on the card, as a share of the space it could fill: the solid, broad ones (the fly, the moth) smaller,
+# the spindly ones (the centipede, the mantis) a little larger, so they all carry about the same weight
+SIZE = {"fly": 0.70, "moth": 0.68, "earwig": 0.80, "cockroach": 0.78, "dragonfly": 0.78, "stag-beetle": 0.78,
+        "s3": 0.80, "centipede": 0.86, "wasp": 0.76, "praying-mantis": 0.82, "scorpion": 0.79}
+W, H = 300, 450
+
+def place(img, size):
+    """the creature cut to its own outline, scaled to `size` of the card's picture space, centred"""
+    box = img.getchannel("A").point(lambda v: 255 if v > 40 else 0).getbbox()
+    c = img.crop(box)
+    k = size * min(W / c.width, H / c.height)
+    c = c.resize((max(1, round(c.width * k)), max(1, round(c.height * k))), Image.LANCZOS)
+    out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    out.paste(c, ((W - c.width) // 2, (H - c.height) // 2))
+    return out
 out = []
 for num in range(1, 12):
     src = np.array(Image.open(f"art/{PICTURES[num]}.png").convert("RGBA")).astype(np.float32)
@@ -41,7 +56,7 @@ for num in range(1, 12):
         if rim:
             gl = (lum / max(1, float(np.median(lum[gold > 0.9]))))[..., None]
             col = col * (1 - gold[..., None]) + np.clip(np.array(rim) * gl * 1.1, 0, 255) * gold[..., None]
-        img = Image.fromarray(np.dstack([np.clip(col, 0, 255), alpha]).astype(np.uint8), "RGBA").resize((300, 450), Image.LANCZOS)
+        img = place(Image.fromarray(np.dstack([np.clip(col, 0, 255), alpha]).astype(np.uint8), "RGBA"), SIZE[PICTURES[num]])
         img.save(f"img/spider-{num}-{name}.webp", "WEBP", quality=85, method=6)
         row.append(img)
     out.append(row)

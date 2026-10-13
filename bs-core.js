@@ -21,7 +21,7 @@ const RANKS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const SPIDER_POSE = ["", "Dangling", "Climbing", "Spinning", "Juggling", "Tightrope", "Trapeze",
   "Wrapping a fly", "Abseiling", "The tower", "Knitting", "Enthroned"];
 const BLACK_SPIDER_RANK = 7;
-const FIRST_LEAD = "R1";            // its holder leads the first trick (and black may not be led then)
+const FIRST_LEAD = "R1";            // its holder leads it to the first trick
 const SWEEP_PENALTY = 60;
 // the score that ends the game, by players: the rulebook's, or about half for a short game
 const TARGETS = { 3: 200, 4: 150, 5: 120, 6: 100 };
@@ -195,8 +195,9 @@ class BlackSpiderGame {
     const cards = this.hands[seat].cards, all = cards.map((_, i) => i);
     const t = this.currentTrick;
     if (!t.plays.length) {
-      // leading: anything - except that black may not lead the first trick
-      if (this.tricksPlayed === 0) { const ok = all.filter(i => cards[i].suit !== "K"); return ok.length ? ok : all; }
+      // leading: anything
+      // the first trick: the holder of the red 1 leads it
+      if (this.tricksPlayed === 0) { const r1 = all.filter(i => cardCode(cards[i]) === FIRST_LEAD); return r1.length ? r1 : all; }
       return all;
     }
     const lead = t.plays[0].card;

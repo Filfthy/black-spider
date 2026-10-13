@@ -101,7 +101,7 @@ function playOut(g, handsIn, me, first) {
   const legalFor = (h) => {
     const all = h.map((_, i) => i);
     if (!plays.length) {
-      if (tricksPlayed === 0) { const ok = all.filter(i => h[i].suit !== "K"); return ok.length ? ok : all; }
+      if (tricksPlayed === 0) { const r1 = all.filter(i => cardCode(h[i]) === FIRST_LEAD); return r1.length ? r1 : all; }
       return all;
     }
     return followIndices(h, plays[0].card);
