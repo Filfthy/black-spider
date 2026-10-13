@@ -10,16 +10,18 @@ from PIL import Image
 COLOURS = {   # body colour, and the outline colour (None: as drawn)
     "red": ((156, 16, 22), None),
     "blue": ((26, 52, 140), None),
-    "green": ((28, 112, 38), None),
-    "purple": ((92, 26, 134), None),
+    "green": ((30, 122, 42), None),
+    "purple": ((104, 30, 150), None),
     "black": ((46, 36, 30), None),
 }
+# shading depth per colour (gamma, brightness): a higher gamma pushes the shadows down and keeps the highlights
+DEPTH = {"green": (2.3, 0.66), "purple": (2.3, 0.64)}
 # which picture each number shows: creepy-crawlies rising in menace, and the 7 - the Black Spider's number - a spider
 PICTURES = {1: "fly", 2: "moth", 3: "earwig", 4: "cockroach", 5: "dragonfly", 6: "stag-beetle",
             7: "s3", 8: "centipede", 9: "wasp", 10: "praying-mantis", 11: "scorpion"}
 # how big each sits on the card, as a share of the space it could fill: the solid, broad ones (the fly, the moth) smaller,
 # the spindly ones (the centipede, the mantis) a little larger, so they all carry about the same weight
-SIZE = {"fly": 0.70, "moth": 0.68, "earwig": 0.80, "cockroach": 0.78, "dragonfly": 0.78, "stag-beetle": 0.78,
+SIZE = {"fly": 0.70, "moth": 0.84, "earwig": 0.80, "cockroach": 0.78, "dragonfly": 0.78, "stag-beetle": 0.78,
         "s3": 0.80, "centipede": 0.86, "wasp": 0.76, "praying-mantis": 0.82, "scorpion": 0.79}
 W, H = 300, 450
 
@@ -50,7 +52,9 @@ for num in range(1, 12):
     row = []
     for name, (body, rim) in COLOURS.items():
         # the body's own texture and shading, deepened (as the red scorpion is drawn): a darker base, more contrast
-        shade = (np.clip(lum / red_lum, 0, 1.3) ** 1.6 * 0.68)[..., None]
+        # (mid-toned colours - green, purple - read flat at the same contrast, so they get more: DEPTH)
+        gamma, k = DEPTH.get(name, (1.6, 0.68))
+        shade = (np.clip(lum / red_lum, 0, 1.35) ** gamma * k)[..., None]
         col = rgb.copy()
         if body: col = col * (1 - red[..., None]) + np.clip(np.array(body) * shade, 0, 255) * red[..., None]
         if rim:
