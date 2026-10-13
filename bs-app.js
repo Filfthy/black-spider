@@ -402,10 +402,9 @@ class GameController {
       } else if (inRound) {
         // this hand so far: the points taken, and the Black Spiders among them
         const pts = g.taken[seat] || 0;
-        const spiders = (g.takenCards[seat] || []).filter(c => c.isBlackSpider).length;
         const cls = pts > 0 ? "bad" : pts < 0 ? "good" : "";
         html += `<span class="taken-token ${cls}" data-tip="Points taken this hand">${pts}</span>` +
-          (spiders ? `<span class="spider-count" data-tip="Black Spiders taken">${spiderIcon(spiders)}</span>` : "");
+          "";
       }
       els.stats.innerHTML = html;
     }
@@ -840,7 +839,7 @@ class GameController {
     else if (pts < 0) this.react(w, "win", 2600);
     done.add(w);
     spiders.forEach(p => { if (!done.has(p.who)) { this.react(p.who, "win", 2600); done.add(p.who); } });
-    if (spiders.length) this.showToast(`${spiderIcon()} ${w === 0 ? "You take" : this.seatName(w) + " takes"} ${spiders.length === 1 ? "a Black Spider" : spiders.length + " Black Spiders"}!`);
+    if (spiders.length) this.showToast(`${w === 0 ? "You take" : this.seatName(w) + " takes"} ${spiders.length === 1 ? "a Black Spider" : spiders.length + " Black Spiders"}!`);
   }
 
   flashStats(seat) {
@@ -1326,6 +1325,7 @@ class GameController {
     const g = this.game;
     const r = g.history[g.history.length - 1];
     if (!r) return;
+    document.querySelectorAll(".bs-toast").forEach(t => t.remove());   // (a message from the last trick would cover it)
     const overlay = document.getElementById("end-overlay");
     const title = document.getElementById("round-summary-title");
     const sub = document.getElementById("round-summary-sub");
@@ -1339,13 +1339,10 @@ class GameController {
       const nextTo = passWords(passOffset(g.roundIndex + 1, g.numPlayers), g.numPlayers);
       sub.textContent = `Next: ${this.seatName(g.nextSeat(g.dealer))} deals, and everyone passes ${nextTo === "across" ? "across" : nextTo}.`;
     }
-    let html = `<thead><tr><th>Player</th><th>Taken</th><th>Points</th><th>Total</th></tr></thead><tbody>`;
+    let html = `<thead><tr><th>Player</th><th>Points</th><th>Total</th></tr></thead><tbody>`;
     for (let seat = 0; seat < g.numPlayers; seat++) {
-      const bits = [];
-      if (r.spiders[seat]) bits.push(spiderIcon(r.spiders[seat]));
-      if (r.sevens[seat]) bits.push(`${r.sevens[seat]} × 7`);
       html += `<tr class="${r.points[seat] <= 0 ? "exact" : "missed"}${seat === 0 ? " me" : ""}">` +
-        `<td>${this.escape(this.seatName(seat))}</td><td class="taken-cell">${bits.join(" ") || "–"}</td>` +
+        `<td>${this.escape(this.seatName(seat))}</td>` +
         `<td>${r.points[seat] > 0 ? "+" : ""}${r.points[seat]}</td><td>${r.totals[seat]}</td></tr>`;
     }
     html += "</tbody>";

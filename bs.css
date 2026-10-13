@@ -63,7 +63,7 @@ body.suits-infernal .card.bs-card[data-wear] .bs-art::after { opacity: calc(var(
 .capture-toast.bs-toast { max-width: min(80vw, 640px); text-align: center; line-height: 1.3; }
 
 /* the round summary: what each player took */
-.end-table .taken-cell { letter-spacing: -0.1em; white-space: nowrap; }
+.end-table .taken-cell { white-space: nowrap; }
 
 /* ---------------------------------------------------------------- the title */
 .bs-logo { display: flex; align-items: center; justify-content: center; gap: 0.25em; font-family: "Manufacturing Consent", "Cinzel", serif;
@@ -111,3 +111,5 @@ body.back-spider .card.back[data-crease]::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 3;
   background-position: center; background-size: 100% 100%; background-repeat: no-repeat; transform: scale(var(--crease-x, 1), var(--crease-y, 1));
 }
+#end-panel:has(.taken-cell) { min-width: min(92vw, 560px); }
+.end-table .taken-cell { padding-right: 1.2em; }
