@@ -1,6 +1,6 @@
 # Run from the BlackSpider folder: python tools/make-spider-faces.py [debug.png]
 #
-# The card pictures, one per number, from the user's art/s1.png .. s11.png: each red body recoloured for each of the five colours (the gold
+# The card pictures, one creature per number (PICTURES below; the 7s are the spider), from the user's art: each red body recoloured for each of the five colours (the gold
 # outline stays gold; on yellow it's darkened to bronze so the two still part), its soft outer glow faded down so it
 # doesn't muddy the parchment. Written to img/spider-<number>-<colour>.webp, 300 x 450.
 import sys
@@ -14,9 +14,12 @@ COLOURS = {   # body colour, and the outline colour (None: as drawn)
     "purple": ((96, 30, 132), None),
     "black": ((34, 26, 22), None),
 }
+# which picture each number shows: creepy-crawlies rising in menace, and the 7 - the Black Spider's number - a spider
+PICTURES = {1: "fly", 2: "moth", 3: "earwig", 4: "cockroach", 5: "dragonfly", 6: "stag-beetle",
+            7: "s3", 8: "centipede", 9: "wasp", 10: "praying-mantis", 11: "scorpion"}
 out = []
 for num in range(1, 12):
-    src = np.array(Image.open(f"art/s{num}.png").convert("RGBA")).astype(np.float32)
+    src = np.array(Image.open(f"art/{PICTURES[num]}.png").convert("RGBA")).astype(np.float32)
     rgb, a = src[..., :3], src[..., 3]
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     # the red body: red well above green and blue
