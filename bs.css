@@ -30,8 +30,8 @@ body.suits-infernal .card.bs-card .corner.bs-corner .rank { font-family: "Cinzel
 .card.bs-card .bs-art svg { width: 100%; height: 100%; overflow: visible; }
 .card.bs-card .bs-art .hl { fill: var(--hl); }
 .card.bs-card .bs-art .hl-line { stroke: var(--hl); fill: none; }
-/* a Black Spider: a faint red glow round its edge, so it's easy to spot */
-.card.bs-card.black-spider { box-shadow: 0 0 0 1.5cqw rgba(160, 20, 12, 0.55), 0 calc(3px * var(--card-scale)) calc(5px * var(--card-scale)) rgba(0, 0, 0, 0.5); }
+/* a Black Spider: a thin red glow round its edge */
+.card.bs-card.black-spider { box-shadow: 0 0 calc(4px * var(--card-scale)) rgba(200, 30, 18, 0.6), 0 calc(3px * var(--card-scale)) calc(5px * var(--card-scale)) rgba(0, 0, 0, 0.5); }
 /* (Oh Hell's wear layer is drawn over the picture panel; keep it subtle on these) */
 body.suits-infernal .card.bs-card[data-wear] .bs-art::after { opacity: calc(var(--wear) * 0.6); }
 
