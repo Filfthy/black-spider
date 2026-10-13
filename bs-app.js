@@ -1474,14 +1474,18 @@ class GameController {
         try { localStorage.setItem("bs_table", r.value); } catch (e) { /* ignore */ }
       });
     });
-    // Card back (applied immediately, remembered). The Infernal back to begin with.
-    const BACKS = ["bugvictim", "hellfire", "classic-blue", "classic-red", "infernal"];
+    // Card back (applied immediately, remembered). The Black Spider back to begin with.
+    const BACKS = ["spider", "bugvictim", "hellfire", "classic-blue", "classic-red", "infernal"];
     const applyBack = (k) => {
       BACKS.forEach(x => document.body.classList.remove("back-" + x));
       document.body.classList.add("back-" + k);
     };
-    let back = "infernal";
-    try { const k = localStorage.getItem("bs_cardback"); if (BACKS.includes(k)) back = k; } catch (e) { /* ignore */ }
+    let back = "spider";
+    try {
+      const k = localStorage.getItem("bs_cardback"); if (BACKS.includes(k)) back = k;
+      // (the spider back arrived after the first test games: whoever was on the old default moves to it, once)
+      if (!localStorage.getItem("bs_backSpider")) { if (k === "infernal") back = "spider"; localStorage.setItem("bs_backSpider", "1"); }
+    } catch (e) { /* ignore */ }
     applyBack(back);
     document.querySelectorAll('input[name="cardback"]').forEach(r => {
       r.checked = (r.value === back);
@@ -2052,7 +2056,7 @@ window.addEventListener("resize", () => {
 // must match exactly what the cards and oh.css ask for (including any ?v=). The current style's art comes first.
 const CARD_ART_KEEP = [];
 function preloadCardArt() {
-  const list = [];
+  const list = ["back-spider.webp?v=1"];
   for (let n = 1; n <= 11; n++) for (const c of ["red", "blue", "purple", "green", "black"]) list.push(`img/spider-${n}-${c}.webp`);
   for (let i = 0; i < 8; i++) list.push(`img/parchment-card-${i}.webp`);
   list.push("img/parchment-card.webp?v=3");
