@@ -1753,6 +1753,9 @@ body.back-infernal .card.back { background: transparent url("back-infernal.webp?
    body.style-infernal: brass and leather panels, parchment nameplates, wax-seal bids, a bronze coin,
    Cinzel for names and headings. Placed last so it wins over the per-table colours. */
 @font-face { font-family: "Cinzel"; src: url("fonts/cinzel.woff2") format("woff2"); font-weight: 400 900; font-display: swap; }
+/* Black Spider: headings and messages in Cormorant Garamond (real lowercase, unlike Cinzel); it draws smaller, so a
+   little larger. Cinzel stays for the figures on the cards and seals, and the small nameplates on phones. */
+@font-face { font-family: "Cormorant Garamond"; src: url("fonts/cormorant-garamond.woff2") format("woff2"); font-weight: 300 700; font-display: swap; size-adjust: 116%; }
 
 /* the style switch itself (both styles) */
 .style-row .seg-style { display: inline-flex; gap: 0.4em; }
@@ -1764,7 +1767,7 @@ body.style-infernal {
   --ui-soft: rgb(240, 200, 130); --ui-soft-rgb: 240, 200, 130;
   --inf-ink: #3a1a0a; --inf-brass: #b8893f; --inf-leather: linear-gradient(180deg, #2c160b 0%, #1d0d06 100%);
 }
-body.style-infernal .seg-style input[value="infernal"] + span { font-family: "Cinzel", Georgia, serif; }
+body.style-infernal .seg-style input[value="infernal"] + span { font-family: "Cormorant Garamond", Georgia, serif; }
 
 /* panels: dark leather with a brass edge, book-like type */
 body.style-infernal #scoreboard, body.style-infernal #bid-panel, body.style-infernal #end-panel, body.style-infernal #start-panel,
@@ -1779,7 +1782,7 @@ body.style-infernal #scoreboard { border-width: 1px !important; }
 body.style-infernal .tut-offer-title, body.style-infernal .scorecard-title, body.style-infernal #end-panel .end-result,
 body.style-infernal #bid-title, body.style-infernal .tab-btn, body.style-infernal #instructions-panel h3, body.style-infernal #bv-more h3,
 body.style-infernal #round-label {
-  font-family: "Cinzel", Georgia, serif; letter-spacing: 0.03em;
+  font-family: "Cormorant Garamond", Georgia, serif; letter-spacing: 0.03em;
 }
 body.style-infernal .tab-btn { font-weight: 700; }
 
@@ -1790,7 +1793,7 @@ body.style-infernal #oh-modal-close, body.style-infernal #btn-offer-tutorial, bo
   background: linear-gradient(180deg, #d9ac5c 0%, #a87a33 100%) !important; color: #2a1206 !important;
   border: 1px solid #6e4a18 !important; box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.5), 0 2px 4px rgba(0, 0, 0, 0.5);
 }
-body.style-infernal #btn-play, body.style-infernal #bid-buttons .bid-btn { font-family: "Cinzel", Georgia, serif; }
+body.style-infernal #btn-play, body.style-infernal #bid-buttons .bid-btn { font-family: "Cormorant Garamond", Georgia, serif; }
 body.style-infernal #btn-tutorial, body.style-infernal .icon-btn, body.style-infernal .bv-games-btn, body.style-infernal .bv-share-buttons button {
   background: var(--inf-leather) !important; border: 1px solid var(--inf-brass) !important; color: #f1dcae !important;
 }
@@ -1835,7 +1838,7 @@ body.style-infernal .trump-coin {
 body.style-infernal .trump-coin .coin-suit { font-size: calc(30px * var(--card-scale)); }
 body.style-infernal .trump-coin .coin-suit { -webkit-text-stroke: 0;   /* keeps its suit colour, struck into the bronze */
   filter: drop-shadow(0 1px 0 rgba(255, 220, 160, 0.55)) drop-shadow(0 -1px 0 rgba(30, 10, 0, 0.5)); }
-body.style-infernal .trump-coin .coin-blank { font-family: "Cinzel", Georgia, serif; color: #3e1e08; text-shadow: 0 1px 0 rgba(255, 220, 160, 0.55); }
+body.style-infernal .trump-coin .coin-blank { font-family: "Cormorant Garamond", Georgia, serif; color: #3e1e08; text-shadow: 0 1px 0 rgba(255, 220, 160, 0.55); }
 
 /* the coach: a parchment note */
 body.style-infernal #coach {
@@ -1852,7 +1855,7 @@ body.style-infernal .seg label > span { border-color: rgba(184, 137, 63, 0.5); }
 body.style-infernal #scoreboard, body.style-infernal .seat-stats, body.style-infernal .end-table { font-variant-numeric: lining-nums tabular-nums; }
 /* the dealer: a small brass disc */
 body.style-infernal .dealer-chip { background: radial-gradient(circle at 35% 30%, #f0cf8a 0%, #b8893f 60%, #7a5320 100%) !important;
-  color: #2a1206 !important; font-family: "Cinzel", Georgia, serif; box-shadow: inset 0 0 0 1px #5a3a12, 0 1px 3px rgba(0, 0, 0, 0.6) !important; border: 0 !important; }
+  color: #2a1206 !important; font-family: "Cormorant Garamond", Georgia, serif; box-shadow: inset 0 0 0 1px #5a3a12, 0 1px 3px rgba(0, 0, 0, 0.6) !important; border: 0 !important; }
 /* the Look & feel copy of the Style switch only shows in the in-game Settings popup (the start screen has its own) */
 #start-panel .style-look-row { display: none; }
 .style-row { align-items: center; }
@@ -1876,9 +1879,9 @@ body.style-infernal #instructions-panel .instructions-content { scrollbar-color:
 body.style-infernal #instructions-panel .instructions-content::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.35) !important; }
 body.style-infernal #instructions-panel .instructions-content::-webkit-scrollbar-thumb { background: #b8893f !important; }
 body.style-infernal .end-table { background: rgba(0, 0, 0, 0.28) !important; border-color: rgba(184, 137, 63, 0.4) !important; font-variant-numeric: lining-nums tabular-nums; }
-body.style-infernal .end-table th { font-family: "Cinzel", Georgia, serif; color: #e8b85a; }
+body.style-infernal .end-table th { font-family: "Cormorant Garamond", Georgia, serif; color: #e8b85a; }
 body.style-infernal .end-table th, body.style-infernal .end-table td { font-size: 15px; border-color: rgba(184, 137, 63, 0.25) !important; }
-body.style-infernal .scorecard-table th { font-family: "Cinzel", Georgia, serif; color: #e8b85a; }
+body.style-infernal .scorecard-table th { font-family: "Cormorant Garamond", Georgia, serif; color: #e8b85a; }
 body.style-infernal .trump-coin .coin-blank { font-size: calc(9.5px * var(--card-scale)); }
 body.suits-infernal .card:not(.back)[data-paper="0"] { background-image: url("img/parchment-card-0.webp"); }
 body.suits-infernal .card:not(.back)[data-paper="1"] { background-image: url("img/parchment-card-1.webp"); }
@@ -2001,7 +2004,7 @@ body.style-infernal #bid-buttons .bid-btn:not(:disabled):hover {
   background: url("img/parchment-card-5.webp") center / 260% 260%, #e3c48b !important; color: #8e1712 !important;
   box-shadow: 0 0 12px 2px rgba(255, 110, 30, 0.6), inset 0 0 7px rgba(110, 50, 15, 0.35) !important;
 }
-body.style-infernal #deck-area .deck-col > div:first-child { font-family: "Cinzel", Georgia, serif; color: #e8c88a; opacity: 0.85; }
+body.style-infernal #deck-area .deck-col > div:first-child { font-family: "Cormorant Garamond", Georgia, serif; color: #e8c88a; opacity: 0.85; }
 
 /* ===== Infernal parchment controls, done properly: an unstretched speck-free tile, browned at the edges by an
    inner shadow so every button and the coach note brown the same way whatever their size ===== */
@@ -2189,7 +2192,7 @@ body.style-infernal #oh-mixer {
   background: rgba(6, 3, 2, 0.82); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
   border-color: rgba(212, 166, 78, 0.55); color: #f1dcae; font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
 }
-body.style-infernal #oh-mixer .mx-row > span { font-family: "Cinzel", Georgia, serif; }
+body.style-infernal #oh-mixer .mx-row > span { font-family: "Cormorant Garamond", Georgia, serif; }
 body.style-infernal #oh-mixer input.vol { accent-color: #b8893f; }
 /* the sound panel opens above everything, the start screen and popups included */
 #oh-mixer { z-index: 20000; }
@@ -2235,7 +2238,7 @@ body.testcard-open #start-overlay, body.testcard-open #bid-panel { opacity: 0 !i
 #oh-testcard .tc-done { padding: 6px 18px; border-radius: 6px; border: 1px solid var(--ui-accent); background: var(--ui-accent); color: #021408; font: inherit; font-weight: 700; cursor: pointer; }
 #oh-testcard .tc-hint { font-size: 13px; font-style: italic; opacity: 0.85; margin-top: 5px; }
 body.style-infernal #oh-testcard .tc-bar { background: rgba(6, 3, 2, 0.82); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); border-color: rgba(212, 166, 78, 0.55); color: #f1dcae; font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif; }
-body.style-infernal #oh-testcard .tc-row > span { font-family: "Cinzel", Georgia, serif; }
+body.style-infernal #oh-testcard .tc-row > span { font-family: "Cormorant Garamond", Georgia, serif; }
 body.style-infernal #oh-testcard .tc-row input { accent-color: #b8893f; }
 body.style-infernal #oh-testcard .tc-done { background: var(--inf-parch, #e8cc93); color: #5e0008; border-color: #8f6a3c; }
 /* Phones, Infernal cards with full faces: the cards played to the table get a bigger corner index, so they read from

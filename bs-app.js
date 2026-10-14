@@ -2061,7 +2061,7 @@ function updateScale() {
 }
 
 // start the Infernal fonts loading now (they are otherwise only fetched when a nameplate first needs them)
-if (document.fonts && document.fonts.load) { document.fonts.load('21px "Manufacturing Consent"').catch(() => {}); document.fonts.load('16px "Cinzel"').catch(() => {}); }
+if (document.fonts && document.fonts.load) { document.fonts.load('21px "Manufacturing Consent"').catch(() => {}); document.fonts.load('16px "Cinzel"').catch(() => {}); document.fonts.load('600 16px "Cormorant Garamond"').catch(() => {}); }
 updateScale();
 const controller = new GameController();
 

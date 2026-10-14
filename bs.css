@@ -43,7 +43,7 @@ body.suits-infernal .card.bs-card[data-wear] .bs-art::after { opacity: calc(var(
 /* which way the cards pass (Oh Hell's trump box) */
 .pass-dir { display: flex; flex-direction: column; align-items: center; gap: 0.1em; color: #f1dcae; text-shadow: 0 0 2px #000, 0 1px 3px #000; }
 .pass-dir span { font-size: calc(34px * var(--card-scale)); line-height: 1; }
-.pass-dir b { font: 600 calc(14px * var(--card-scale)) "Cinzel", Georgia, serif; text-transform: uppercase; letter-spacing: 0.06em; }
+.pass-dir b { font: 600 calc(14px * var(--card-scale)) "Cormorant Garamond", Georgia, serif; text-transform: uppercase; letter-spacing: 0.06em; }
 /* points taken this hand, by each name (a wax-seal coin, as Oh Hell's bids) */
 .taken-token {
   display: inline-flex; align-items: center; justify-content: center; min-width: 1.9em; height: 1.9em; padding: 0 0.3em;
@@ -55,7 +55,7 @@ body.suits-infernal .card.bs-card[data-wear] .bs-art::after { opacity: calc(var(
 .spider-count { margin-left: 0.25em; font-size: 0.95em; letter-spacing: -0.15em; filter: drop-shadow(0 0 2px #000); }
 
 /* the passing panel (Oh Hell's bid panel) */
-#bid-panel .pass-btn { font: 700 calc(16px * var(--card-scale)) "Cinzel", Georgia, serif; padding: 0.5em 1.3em; }
+#bid-panel .pass-btn { font: 700 calc(16px * var(--card-scale)) "Cormorant Garamond", Georgia, serif; padding: 0.5em 1.3em; }
 #bid-panel .pass-btn:disabled { opacity: 0.55; cursor: default; }
 #bid-title b { color: #ffd27a; }
 
@@ -84,7 +84,7 @@ body.suits-infernal .card.bs-card[data-wear] .bs-art::after { opacity: calc(var(
 .capture-toast.bs-toast {
   background: linear-gradient(180deg, #2c160b 0%, #1d0d06 100%) !important; color: #f1dcae !important;
   border: 1px solid #b8893f !important; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6) !important;
-  font: 600 calc(19px * var(--card-scale)) "Cinzel", Georgia, serif !important; padding: 0.55em 1.2em !important; border-radius: 8px !important;
+  font: 600 calc(19px * var(--card-scale)) "Cormorant Garamond", Georgia, serif !important; padding: 0.55em 1.2em !important; border-radius: 8px !important;
 }
 .capture-toast.bs-toast .sp-icon { width: 1.3em; height: 1.3em; margin-right: 0.2em; }
 .spider-count .sp-icon { width: 1.35em; height: 1.35em; }
