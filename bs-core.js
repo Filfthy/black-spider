@@ -84,7 +84,9 @@ function shuffle(a) {
 //   passing       the passing cycle: "lr" left, right; "lrn" left, right, no pass; "lra" left, right, across;
 //                 "lran" left, right, across, no pass (across only with 4 players: otherwise it's dropped)
 //   sweep         taking all 16 black cards in a hand scores 0, and everyone else 60 (off: they're just points)
-const DEFAULT_RULES = { redOne: true, followNumber: true, noBlackFirst: false, blackBroken: false, passing: "lra", sweep: true };
+// (the standard: pass left, right; red 1 leads; colour or number; no black on the first trick; black led once broken;
+// the sweep on)
+const DEFAULT_RULES = { redOne: true, followNumber: true, noBlackFirst: true, blackBroken: true, passing: "lr", sweep: true };
 function cleanRules(r) {
   const o = Object.assign({}, DEFAULT_RULES, r || {});
   for (const k of ["redOne", "followNumber", "noBlackFirst", "blackBroken", "sweep"]) o[k] = !!o[k];

@@ -38,11 +38,13 @@ const TUTORIAL = {
       play0: { t: "Whoever has the <b>red 1</b> leads it to the first trick. That's you: play the red 1." },
       trick0: [
         "If you have the colour that was led, you must follow it, though you may play a card of the <b>same number</b> instead. Persephone followed with red; Bub played a <b>green 1</b> instead, matching the number.",
-        "The highest card <b>of the colour led</b> wins. Bub's green 1 could never win, as green wasn't led. Lilith's red 9 won, and she leads next."
+        "The highest card <b>of the colour led</b> wins. Bub's green 1 could never win, as green wasn't led. Lilith's red 9 won, and she leads next.",
+        "One more thing about the first trick: <b>no black cards</b> may be played on it, unless you have nothing else."
       ],
       play1: { t: "Blue 4 is led. You have no blue, so you may play anything. Drop your <b>Black Spider</b> on it!" },
       trick1: [
-        "Bub's blue 8 was the highest blue, so Bub takes the trick, and your Black Spider with it: 10 points to Bub. Look at his face."
+        "Bub's blue 8 was the highest blue, so Bub takes the trick, and your Black Spider with it: 10 points to Bub. Look at his face.",
+        "Black can't be led until it's <b>broken</b>, by someone playing a black card on a trick where another colour was led. Your Black Spider just broke it: from now on black may be led."
       ],
       play2: { t: "Purple 5 is led, and you have purple. Persephone will play her <b>purple 7</b>, worth −5. Win the trick with your <b>purple 11</b> and take it." },
       trick2: [

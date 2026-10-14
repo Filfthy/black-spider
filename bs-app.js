@@ -1008,11 +1008,11 @@ class GameController {
       (r.blackBroken ? ` <strong>Black can't be led until it's broken</strong>: until someone has played black on a trick led with another colour.` : "");
     if (q("howto-sweep")) q("howto-sweep").innerHTML = `<strong>The sweep</strong><br>${notes.sweep}`;
     const opt = [
-      ["Passing", "left, right; left, right, none; left, right, across; or left, right, across, none (across only with 4 players).", true],
+      ["Passing", "left, right (standard); left, right, none; left, right, across; or left, right, across, none (across only with 4 players).", true],
       ["First card", "the red 1 leads the first trick (standard), or the player to the dealer's left leads anything.", !r.redOne],
       ["Following", "colour or a matching number (standard), or the colour only.", !r.followNumber],
-      ["First trick", "black cards allowed (standard), or no black unless you have nothing else.", r.noBlackFirst],
-      ["Leading black", "any time (standard), or only once black is broken, as hearts are in Hearts.", r.blackBroken],
+      ["First trick", "no black unless you have nothing else (standard), or black cards allowed.", !r.noBlackFirst],
+      ["Leading black", "only once black is broken, as hearts are in Hearts (standard), or any time.", !r.blackBroken],
       ["The sweep", "on (standard): all 16 black cards score 0, everyone else 60; or off.", !r.sweep],
     ];
     if (q("howto-optional")) q("howto-optional").innerHTML =
