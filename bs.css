@@ -128,8 +128,8 @@ html:has(body.table-cave) { background-color: #0c0806; }
 .seg-tables .sw-cave { background: radial-gradient(circle at 18% 22%, rgba(215,205,190,0.35) 0 1px, transparent 2px),
   repeating-conic-gradient(from 0deg at 0 0, rgba(215,205,190,0.25) 0 1deg, transparent 1deg 12deg),
   radial-gradient(ellipse at 50% 60%, #3a2a1e, #0c0806) !important; color: #e8d6b8 !important; }
-/* on the Cave the passing panel has no box over the picture: just its words, with a thin dark edge to read by */
-body.table-cave #bid-panel { background: none !important; border-color: transparent !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+/* on the Cave the passing panel is just its outline over the picture, no shading: its words have a thin dark edge to read by */
+body.table-cave #bid-panel { background: none !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 body.table-cave #bid-panel #bid-title, body.table-cave #bid-panel #bid-note {
   text-shadow: 0 0 1px #000, 0 0 2px #000, 0 0 3px #000, 0 1px 2px #000;
 }
