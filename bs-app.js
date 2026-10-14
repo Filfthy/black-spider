@@ -125,6 +125,8 @@ class GameController {
       else if (+savedPlayers >= 3 && +savedPlayers <= 5) { this.playersChoice = String(+savedPlayers); this.numPlayers = +savedPlayers; }
       if (localStorage.getItem("bs_length") === "short") this.length = "short";
 
+      try { this.rules = cleanRules(JSON.parse(localStorage.getItem("bs_rules") || "null")); } catch (e) { this.rules = cleanRules(null); }
+
       const savedFirst = localStorage.getItem("bs_firstDeal");
       if (savedFirst) this.firstDealMode = savedFirst;
 
@@ -446,10 +448,13 @@ class GameController {
       }
     }
     // which way the cards pass this hand
-    if (this.dom.passSlot && g.passTo) {
+    if (this.dom.passSlot && g.passTo != null && g.roundIndex >= 0) {
       const w = passWords(g.passTo, g.numPlayers);
-      const arrow = { left: "⟲", right: "⟳", across: "⇅" }[w];
-      this.dom.passSlot.innerHTML = `<div class="pass-dir" data-tip="This hand everyone passes three cards ${w === "across" ? "across the table" : "to the " + w}"><span>${arrow}</span><b>${w}</b></div>`;
+      const arrow = { left: "⟲", right: "⟳", across: "⇅", "no pass": "⊘" }[w];
+      const tip = w === "no pass" ? "No passing this hand" : `This hand everyone passes three cards ${w === "across" ? "across the table" : "to the " + w}`;
+      this.dom.passSlot.innerHTML = `<div class="pass-dir" data-tip="${tip}"><span>${arrow}</span><b>${w}</b></div>`;
+      const cap = document.getElementById("pass-caption");
+      if (cap) cap.textContent = w === "no pass" ? "This hand" : "Passing";
     }
   }
 
@@ -670,7 +675,7 @@ class GameController {
     if (this.firstDealMode === "player") firstDealer = 0;
     else if (this.firstDealMode === "opponent") firstDealer = 1 + Math.floor(Math.random() * (n - 1));
     else firstDealer = Math.floor(Math.random() * n);
-    this.game.startNewGame({ numPlayers: n, firstDealer, length: this.length });
+    this.game.startNewGame({ numPlayers: n, firstDealer, length: this.length, rules: this.rules });
     this.aiEngine.resetMemory();
     this.aiEngine.setDifficulty(this.difficulty);
     this.buildSeats();
@@ -694,6 +699,13 @@ class GameController {
     if (this.tut) {
       await this.coach("start");
       if (ep !== this.epoch) return;
+    }
+    if (this.game.phase === "play") {          // a hand with no passing (the house rule): straight to the tricks
+      this.showToast("No passing this hand.");
+      await wait(900);
+      if (ep !== this.epoch) return;
+      await this.continuePlay(ep);
+      return;
     }
     await this.passing(ep);
   }
@@ -962,16 +974,58 @@ class GameController {
     await this.continuePlay(ep);
   }
 
+  // ---- the rules: their words (How to play, and the notes under the Rules tab) ----
+  // the rules in force: this game's while one is on, otherwise the ones chosen for the next
+  rulesNow() { const g = this.game; return g.phase !== "idle" && g.rules ? g.rules : this.rules; }
+  passingWords(cycle, n) {
+    const names = { l: "left", r: "right", a: "across", n: "no passing" };
+    const list = c => c.map(x => names[x]).join(", ");
+    const four = list(passCycle(cycle, 4)), other = list(passCycle(cycle, 3));
+    return four === other ? `${four}, and round again` : `${four}, and round again (with 3 or 5 players: ${other})`;
+  }
+  ruleNotes(r) {
+    return {
+      passing: `Passing goes ${this.passingWords(r.passing, 4)}.`,
+      redOne: r.redOne ? "Whoever holds the red 1 leads it to the first trick." : "The player to the dealer's left leads the first trick, with any card.",
+      followNumber: r.followNumber ? "Having the colour led, you play that colour - or a card of the same number instead (any 7 on a 7)."
+                                   : "Having the colour led, you must play that colour: a matching number doesn't count.",
+      noBlackFirst: r.noBlackFirst ? "No black cards on the first trick, unless you have nothing else you may play."
+                                   : "Black cards may be played on the first trick.",
+      sweep: r.sweep ? "Take all 16 black cards in a hand and you score 0 for it, and everyone else scores 60."
+                     : "No sweep: taking every black card just scores their points.",
+      blackBroken: r.blackBroken ? "Black can't be led until it's broken: someone plays a black card on a trick where another colour was led. (With nothing but black, you may lead it.)"
+                                 : "Black may be led at any time.",
+    };
+  }
+  fillHowTo() {
+    const r = this.rulesNow(), notes = this.ruleNotes(r), q = id => document.getElementById(id);
+    if (q("howto-passing")) q("howto-passing").innerHTML = `<strong>Passing</strong><br>Before each hand everyone passes three cards, face down. ${notes.passing}`;
+    if (q("howto-playing")) q("howto-playing").innerHTML = `<strong>Playing</strong><br>${notes.redOne} ` +
+      (r.followNumber ? `If you have the colour led, you must follow it: play a card of that colour, or a card of the <strong>same number</strong> instead.`
+                      : `If you have the colour led, you must play a card of that colour.`) +
+      ` If you have none of the colour led, play anything.` +
+      (r.noBlackFirst ? ` <strong>No black on the first trick</strong>, unless you have nothing else.` : "") +
+      (r.blackBroken ? ` <strong>Black can't be led until it's broken</strong>: until someone has played black on a trick led with another colour.` : "");
+    if (q("howto-sweep")) q("howto-sweep").innerHTML = `<strong>The sweep</strong><br>${notes.sweep}`;
+    const opt = [
+      ["Passing", "left, right; left, right, none; left, right, across; or left, right, across, none (across only with 4 players).", true],
+      ["First card", "the red 1 leads the first trick (standard), or the player to the dealer's left leads anything.", !r.redOne],
+      ["Following", "colour or a matching number (standard), or the colour only.", !r.followNumber],
+      ["First trick", "black cards allowed (standard), or no black unless you have nothing else.", r.noBlackFirst],
+      ["Leading black", "any time (standard), or only once black is broken, as hearts are in Hearts.", r.blackBroken],
+      ["The sweep", "on (standard): all 16 black cards score 0, everyone else 60; or off.", !r.sweep],
+    ];
+    if (q("howto-optional")) q("howto-optional").innerHTML =
+      `<li>Chosen in the <strong>Rules</strong> tab before a game. The game you're playing uses:</li>` +
+      opt.map(([k, v, on]) => `<li><strong>${k}</strong>: ${v}${k === "Passing" ? ` <em>Now: ${this.passingWords(r.passing, 4)}.</em>` : on ? " <em>(house rule on)</em>" : ""}</li>`).join("");
+  }
+
   // a card you may not play: say why
   explainRefusal(idx) {
     const g = this.game, c = g.hands[0].cards[idx];
     if (!c || g.phase !== "play") return;
-    if (!g.currentTrick.plays.length) {
-      if (g.tricksPlayed === 0) this.showToast("You hold the red 1, so you lead it to the first trick.");
-      return;
-    }
-    const lead = g.currentTrick.plays[0].card;
-    this.showToast(`You have ${COLOUR_NAME[lead.suit]}, so you must follow the ${cardName(lead)}: play a ${COLOUR_NAME[lead.suit]} card, or a ${lead.rank}.`);
+    const why = refusalReason(g.hands[0].cards, idx, g.playState, g.rules);
+    if (why) this.showToast(why);
   }
 
   async finishTrick(ep) {
@@ -1162,7 +1216,7 @@ class GameController {
     document.getElementById("btn-settings").innerHTML = ICONS.gear;
     document.getElementById("btn-bright").innerHTML = ICONS.sun;
     document.getElementById("btn-bright").addEventListener("click", e => { e.currentTarget.blur(); this.openTestCard(); });
-    document.getElementById("btn-rules").addEventListener("click", e => { e.currentTarget.blur(); this.showLentPopup("Rules", document.querySelector("#instructions-panel .instructions-content")); });
+    document.getElementById("btn-rules").addEventListener("click", e => { e.currentTarget.blur(); this.fillHowTo(); this.showLentPopup("How to play", document.querySelector("#instructions-panel .instructions-content")); });
     document.getElementById("btn-settings").addEventListener("click", e => { e.currentTarget.blur(); this.showLentPopup("Settings", document.querySelector('.tab-pane[data-pane="look"]')); });
     const shade = document.getElementById("oh-modal");
     document.getElementById("oh-modal-close").addEventListener("click", () => this.closeLentPopup());
@@ -1337,8 +1391,8 @@ class GameController {
     if (r.sweeper >= 0) sub.textContent = `${r.sweeper === 0 ? "You" : this.seatName(r.sweeper)} took every black card: 0 for ${r.sweeper === 0 ? "you" : "them"}, 60 for everyone else!`;
     else if (gameOver) sub.textContent = `${this.seatName(g.scores.indexOf(Math.max(...g.scores)))} has reached ${g.target}: the game is over.`;
     else {
-      const nextTo = passWords(passOffset(g.roundIndex + 1, g.numPlayers), g.numPlayers);
-      sub.textContent = `Next: ${this.seatName(g.nextSeat(g.dealer))} deals, and everyone passes ${nextTo === "across" ? "across" : nextTo}.`;
+      const nextTo = passWords(passOffset(g.roundIndex + 1, g.numPlayers, g.rules.passing), g.numPlayers);
+      sub.textContent = `Next: ${this.seatName(g.nextSeat(g.dealer))} deals, and ${nextTo === "no pass" ? "there's no passing" : "everyone passes " + nextTo}.`;
     }
     let html = `<thead><tr><th>Player</th><th>Points</th><th>Total</th></tr></thead><tbody>`;
     for (let seat = 0; seat < g.numPlayers; seat++) {
@@ -1540,6 +1594,35 @@ class GameController {
     };
     tabBtns.forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
 
+    // ---- the Rules tab ----
+    const RULE_KEYS = ["passing", "redOne", "followNumber", "noBlackFirst", "blackBroken", "sweep"];
+    const showRules = () => {
+      const r = this.rules, notes = this.ruleNotes(r);
+      for (const k of RULE_KEYS) {
+        document.querySelectorAll(`input[name="r-${k}"]`).forEach(x => { x.checked = k === "passing" ? x.value === r.passing : (x.value === "1") === r[k]; });
+        const note = document.querySelector(`.opt-note[data-note="${k}"]`);
+        if (note) note.textContent = notes[k];
+      }
+      const std = RULE_KEYS.every(k => r[k] === DEFAULT_RULES[k]);
+      const when = document.getElementById("rules-when");
+      if (when) when.textContent = std ? "Standard rules" : "House rules: from the next game";
+      this.fillHowTo();
+    };
+    for (const k of RULE_KEYS) document.querySelectorAll(`input[name="r-${k}"]`).forEach(x => x.addEventListener("change", () => {
+      this.rules = cleanRules(Object.assign({}, this.rules, { [k]: k === "passing" ? x.value : x.value === "1" }));
+      try { localStorage.setItem("bs_rules", JSON.stringify(this.rules)); } catch (e) { /* ignore */ }
+      showRules();
+    }));
+    const stdBtn = document.getElementById("btn-rules-standard");
+    if (stdBtn) stdBtn.addEventListener("click", () => {
+      this.rules = cleanRules(null);
+      try { localStorage.removeItem("bs_rules"); } catch (e) { /* ignore */ }
+      showRules();
+    });
+    const instr2 = document.getElementById("btn-instructions-2");
+    if (instr2 && instrBtn) instr2.addEventListener("click", () => instrBtn.click());
+    showRules();
+
     // ---- the line under Play ----
     const summaryEl = document.getElementById("round-summary-line");
     const playSub = document.getElementById("btn-play-sub");
@@ -1633,6 +1716,7 @@ class GameController {
 
     if (instrBtn && instrPanel) {
       instrBtn.addEventListener("click", () => {
+        this.fillHowTo();
         const startPanelEl = document.getElementById("start-panel");
         // The How to play page sizes itself (see oh.css), not to the start panel.
         if (startPanelEl) startPanelEl.classList.add("instructions-open");

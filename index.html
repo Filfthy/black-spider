@@ -17,7 +17,7 @@
   <meta property="og:description" content="Dodge the Black Spiders. A trick-taking card game with a sting in it.">
   <link rel="stylesheet" href="./gw.css?v=1">
   <link rel="stylesheet" href="./oh.css?v=3">
-  <link rel="stylesheet" href="./bs.css?v=20">
+  <link rel="stylesheet" href="./bs.css?v=22">
   <!-- the Infernal fonts load straight away, so nameplates are never drawn first in a stand-in font and then jump -->
   <link rel="preload" href="fonts/manufacturing-consent.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/cinzel.woff2" as="font" type="font/woff2" crossorigin>
@@ -51,7 +51,7 @@
     <!-- Which way the cards pass this hand (bottom left, beside your hand) -->
     <div id="deck-area">
       <div class="deck-col">
-        <div>Passing</div>
+        <div id="pass-caption">Passing</div>
         <div id="pass-slot"></div>
       </div>
     </div>
@@ -187,6 +187,7 @@
 
       <div class="tab-bar" role="tablist">
         <button type="button" class="tab-btn active" data-tab="game">Game</button>
+        <button type="button" class="tab-btn" data-tab="rules">Rules</button>
         <button type="button" class="tab-btn" data-tab="look">Look &amp; feel</button>
       </div>
 
@@ -211,6 +212,65 @@
         <div class="round-summary-line" id="round-summary-line"></div>
         <div class="opt-row opt-row-end">
           <button id="btn-instructions" type="button">How to play</button>
+        </div>
+      </div>
+
+      <!-- RULES TAB: the standard rules, or house rules (each explained under its row; they apply from the next game) -->
+      <div class="tab-pane" data-pane="rules">
+        <div class="opt-row">
+          <div class="opt-label">Passing</div>
+          <div class="seg seg-rules" role="radiogroup">
+            <label data-tip="Pass three cards to the left one hand, to the right the next, and so on"><input type="radio" name="r-passing" value="lr"><span>Left, right</span></label>
+            <label data-tip="Left, then right, then a hand with no passing at all"><input type="radio" name="r-passing" value="lrn"><span>Left, right, none</span></label>
+            <label data-tip="Left, right, then across the table (4 players only: with 3 or 5 it's just left, right)"><input type="radio" name="r-passing" value="lra" checked><span>Left, right, across</span></label>
+            <label data-tip="Left, right, across, then a hand with no passing (4 players only: with 3 or 5 it's left, right, none)"><input type="radio" name="r-passing" value="lran"><span>Left, right, across, none</span></label>
+          </div>
+        </div>
+        <div class="opt-note" data-note="passing"></div>
+        <div class="opt-row">
+          <div class="opt-label">First card</div>
+          <div class="seg seg-rules" role="radiogroup">
+            <label data-tip="Whoever holds the red 1 must lead it to the first trick"><input type="radio" name="r-redOne" value="1" checked><span>Red 1 leads</span></label>
+            <label data-tip="The player to the dealer's left leads the first trick with any card"><input type="radio" name="r-redOne" value="0"><span>Any card</span></label>
+          </div>
+        </div>
+        <div class="opt-note" data-note="redOne"></div>
+        <div class="opt-row">
+          <div class="opt-label">Following</div>
+          <div class="seg seg-rules" role="radiogroup">
+            <label data-tip="If you have the colour led, play that colour - or a card of the same number instead"><input type="radio" name="r-followNumber" value="1" checked><span>Colour or number</span></label>
+            <label data-tip="If you have the colour led, you must play that colour"><input type="radio" name="r-followNumber" value="0"><span>Colour only</span></label>
+          </div>
+        </div>
+        <div class="opt-note" data-note="followNumber"></div>
+        <div class="opt-row">
+          <div class="opt-label">First trick</div>
+          <div class="seg seg-rules" role="radiogroup">
+            <label data-tip="Black cards may be played on the first trick"><input type="radio" name="r-noBlackFirst" value="0" checked><span>Black allowed</span></label>
+            <label data-tip="No black cards on the first trick, unless you have nothing else you may play"><input type="radio" name="r-noBlackFirst" value="1"><span>No black</span></label>
+          </div>
+        </div>
+        <div class="opt-note" data-note="noBlackFirst"></div>
+        <div class="opt-row">
+          <div class="opt-label">Leading black</div>
+          <div class="seg seg-rules" role="radiogroup">
+            <label data-tip="Black may be led at any time"><input type="radio" name="r-blackBroken" value="0" checked><span>Any time</span></label>
+            <label data-tip="As hearts in Hearts: black can't be led until someone has played a black card on a trick where another colour was led"><input type="radio" name="r-blackBroken" value="1"><span>Once broken</span></label>
+          </div>
+        </div>
+        <div class="opt-note" data-note="blackBroken"></div>
+        <div class="opt-row">
+          <div class="opt-label">The sweep</div>
+          <div class="seg seg-rules" role="radiogroup">
+            <label data-tip="Take all 16 black cards in a hand: you score 0 for it, and everyone else 60"><input type="radio" name="r-sweep" value="1" checked><span>On</span></label>
+            <label data-tip="No sweep: taking every black card just scores its points"><input type="radio" name="r-sweep" value="0"><span>Off</span></label>
+          </div>
+        </div>
+        <div class="opt-note" data-note="sweep"></div>
+        <div class="opt-row opt-row-end">
+          <span class="rules-when" id="rules-when"></span>
+          <button id="btn-rules-standard" type="button" data-tip="Back to the standard rules">Standard rules</button>
+          <button id="btn-instructions-2" type="button">How to play</button>
         </div>
       </div>
 
@@ -280,6 +340,13 @@
     <div id="instructions-panel" style="display:none;">
       <div class="instructions-content">
 
+        <h3>How to play</h3>
+        <ul>
+          <li>Everyone is dealt the whole pack. Each hand you pass three cards, then play tricks.</li>
+          <li>Taking points is bad: they come from the black cards, and the Black Spiders most of all. Lowest total wins.</li>
+          <li>The <strong>Tutorial</strong> plays one hand with you, step by step.</li>
+        </ul>
+
         <h3>The cards</h3>
         <ul>
           <li>60 cards: red, blue, purple and green, each numbered 1 to 11, and black 1 to 11 plus five more black 7s.</li>
@@ -290,12 +357,12 @@
         <h3>Rules</h3>
         <ul>
           <li>3 to 5 players, and every card is dealt: 20 each with 3 players, 15 with 4, 12 with 5.</li>
-          <li>
+          <li id="howto-passing">
             <strong>Passing</strong><br>
             Before each hand everyone passes three cards: to the left, then the right, and so on.
             With 4 players it goes left, right, then across.
           </li>
-          <li>
+          <li id="howto-playing">
             <strong>Playing</strong><br>
             Whoever holds the <strong>red 1</strong> leads it to the first trick.
             If you have the colour led, you must follow it: play a card of that colour, or a card of the
@@ -311,12 +378,15 @@
             Points are bad. Black 1 to 6 score 1 each, black 8 to 11 score 2 to 5, and each Black Spider scores 10.
             The coloured 7s are <strong>−5</strong> each: good to take. Every hand adds up to 60.
           </li>
-          <li>
+          <li id="howto-sweep">
             <strong>The sweep</strong><br>
             Take all 16 black cards and you score 0 for the hand, and everyone else scores 60.
           </li>
           <li>The game ends when someone reaches 200 (3 players), 150 (4) or 120 (5). Lowest total wins.</li>
         </ul>
+
+        <h3>Optional rules</h3>
+        <ul id="howto-optional"></ul>
 
         <h3>Tips</h3>
         <ul>
@@ -336,9 +406,9 @@
   </div>
 </div>
 
-  <script src="./bs-core.js?v=6"></script>
+  <script src="./bs-core.js?v=7"></script>
   <script src="./bs-tutorial.js?v=4"></script>
-  <script src="./bs-ai.js?v=4"></script>
+  <script src="./bs-ai.js?v=5"></script>
   <script src="./bv-more.js?v=1"></script>
   <script src="./oh-souls.js?v=1"></script>
   <script src="./bs-cave-map.js?v=2"></script>
@@ -346,7 +416,7 @@
   <script src="./oh-music-player.js?v=1"></script>
   <script src="./living-data.js?v=2"></script>
   <script src="./living-portraits.js?v=2"></script>
-  <script src="./bs-app.js?v=20"></script>
+  <script src="./bs-app.js?v=22"></script>
   <script>
     BVMore.init({ key: "black-spider", title: "Black Spider", others: ["oh-hell-extended", "drakeharbour", "german-whist", "artifact"],
       shareText: "Dodge the Black Spiders. Play Black Spider.",

@@ -3,6 +3,7 @@
 //
 // 60 cards: red, blue, purple and green, each numbered 1-11, and black 1-11 plus five more black 7s - six Black
 // Spiders. Everyone passes 3 cards, then tricks: follow the colour led if you can (a card of the same number may be played instead); the
+// (those are the standard rules; the optional ones, chosen in Settings, are in DEFAULT_RULES below)
 // highest card of the colour led wins (the first of equal cards). Taking points is bad: black 1-6 are 1, the Black
 // Spiders 10, black 8-11 2-5; the coloured 7s are -5 (good to take). Taking every black card ("the sweep") scores 0
 // and everyone else 60. Lowest total when someone reaches the target wins.
@@ -74,13 +75,65 @@ function shuffle(a) {
   return a;
 }
 
-// Following: if you have the colour led you must play that colour - or, instead, a card of the same number.
-// With none of the colour led, you may play anything (a matching number included).
-const follows = (c, lead) => c.suit === lead.suit || c.rank === lead.rank;
-function followIndices(cards, lead) {
+// ===== The rules (the standard ones, and the optional ones chosen in Settings) =====
+//   redOne        the holder of the red 1 leads it to the first trick (off: the player left of the dealer leads)
+//   followNumber  following the colour led, a card of the same number may be played instead (off: colour only)
+//   noBlackFirst  no black cards on the first trick (unless you have nothing else you may play)
+//   blackBroken   black can't be led until it's broken - a black card played on a trick where another colour was led,
+//                 as hearts are in Hearts (unless you have only black)
+//   passing       the passing cycle: "lr" left, right; "lrn" left, right, no pass; "lra" left, right, across;
+//                 "lran" left, right, across, no pass (across only with 4 players: otherwise it's dropped)
+//   sweep         taking all 16 black cards in a hand scores 0, and everyone else 60 (off: they're just points)
+const DEFAULT_RULES = { redOne: true, followNumber: true, noBlackFirst: false, blackBroken: false, passing: "lra", sweep: true };
+function cleanRules(r) {
+  const o = Object.assign({}, DEFAULT_RULES, r || {});
+  for (const k of ["redOne", "followNumber", "noBlackFirst", "blackBroken", "sweep"]) o[k] = !!o[k];
+  if (!["lr", "lrn", "lra", "lran"].includes(o.passing)) o.passing = DEFAULT_RULES.passing;
+  return o;
+}
+
+// Following: if you have the colour led you must play that colour - or, instead, a card of the same number (unless
+// the "colour only" rule is on). With none of the colour led, you may play anything.
+const follows = (c, lead, rules = DEFAULT_RULES) => c.suit === lead.suit || (rules.followNumber && c.rank === lead.rank);
+function followIndices(cards, lead, rules = DEFAULT_RULES) {
   const all = cards.map((_, i) => i);
   if (!cards.some(c => c.suit === lead.suit)) return all;
-  return all.filter(i => follows(cards[i], lead));
+  return all.filter(i => follows(cards[i], lead, rules));
+}
+// what may be played: st = { plays (this trick so far), tricksPlayed, blackBroken }
+function legalIndices(cards, st, rules = DEFAULT_RULES) {
+  const all = cards.map((_, i) => i);
+  const unlessOnly = (list, keep) => { const k = list.filter(keep); return k.length ? k : list; };
+  const notBlack = i => cards[i].suit !== "K";
+  let ok;
+  if (!st.plays.length) {
+    if (st.tricksPlayed === 0 && rules.redOne) {
+      const r1 = all.filter(i => cardCode(cards[i]) === FIRST_LEAD);
+      if (r1.length) return r1;
+    }
+    ok = all;
+    if (rules.blackBroken && !st.blackBroken) ok = unlessOnly(ok, notBlack);
+  } else ok = followIndices(cards, st.plays[0].card, rules);
+  // (on the first trick, unless black was led - then black is what follows it)
+  if (rules.noBlackFirst && st.tricksPlayed === 0 && !(st.plays.length && st.plays[0].card.suit === "K")) ok = unlessOnly(ok, notBlack);
+  return ok;
+}
+// why a card may not be played (for the message on screen), or "" if it may
+function refusalReason(cards, idx, st, rules = DEFAULT_RULES) {
+  if (legalIndices(cards, st, rules).includes(idx)) return "";
+  const c = cards[idx];
+  if (!st.plays.length && st.tricksPlayed === 0 && rules.redOne && cards.some(x => cardCode(x) === FIRST_LEAD))
+    return "You hold the red 1, so you lead it to the first trick.";
+  if (st.plays.length) {
+    const lead = st.plays[0].card, col = COLOUR_NAME[lead.suit];
+    if (cards.some(x => x.suit === lead.suit) && !follows(c, lead, rules))
+      return rules.followNumber ? `You have ${col}, so you must follow the ${cardName(lead)}: play a ${col} card, or a ${lead.rank}.`
+                                : `You have ${col}, so you must follow it with a ${col} card.`;
+  }
+  if (c.suit === "K" && rules.noBlackFirst && st.tricksPlayed === 0) return "No black cards on the first trick, while you have something else to play.";
+  if (c.suit === "K" && !st.plays.length && rules.blackBroken && !st.blackBroken)
+    return "Black can't be led until it's broken: someone has to play a black card on a trick where another colour was led.";
+  return "You can't play that card now.";
 }
 // which play wins: the highest of the colour led; of equal cards (the Black Spiders), the first played
 function trickWinnerIndex(cards) {
@@ -98,12 +151,15 @@ class Trick {
   get points() { return this.plays.reduce((a, p) => a + p.card.points, 0); }
 }
 
-// passing: who you pass to, as seats to your left (clockwise). 4 players: left, right, across; otherwise left, right.
-function passOffset(roundIndex, n) {
-  if (n === 4) return [1, 3, 2][roundIndex % 3];
-  return roundIndex % 2 === 0 ? 1 : n - 1;
+// passing: who you pass to, as seats to your left (clockwise); 0 is a hand with no passing. The cycle is the rule
+// chosen ("lra": left, right, across...); across needs 4 players, so with 3 or 5 it's left out.
+const PASS_CYCLES = { lr: ["l", "r"], lrn: ["l", "r", "n"], lra: ["l", "r", "a"], lran: ["l", "r", "a", "n"] };
+function passCycle(cycle, n) { const c = PASS_CYCLES[cycle] || PASS_CYCLES.lra; return n === 4 ? c : c.filter(x => x !== "a"); }
+function passOffset(roundIndex, n, cycle = "lra") {
+  const c = passCycle(cycle, n), step = c[roundIndex % c.length];
+  return step === "l" ? 1 : step === "r" ? n - 1 : step === "a" ? 2 : 0;
 }
-function passWords(offset, n) { return offset === 1 ? "left" : offset === n - 1 ? "right" : "across"; }
+function passWords(offset, n) { return offset === 0 ? "no pass" : offset === 1 ? "left" : offset === n - 1 ? "right" : "across"; }
 
 // Seat 0 is always the human. Seats go clockwise: 0 -> 1 -> 2 ...
 class BlackSpiderGame {
@@ -120,8 +176,9 @@ class BlackSpiderGame {
     this.playedCards = [];
   }
 
-  startNewGame({ numPlayers = 4, firstDealer = 0, length = "full", presetRounds = null } = {}) {
+  startNewGame({ numPlayers = 4, firstDealer = 0, length = "full", presetRounds = null, rules = null } = {}) {
     this.numPlayers = numPlayers;
+    this.rules = cleanRules(rules);
     this.target = Math.round(TARGETS[numPlayers] * (length === "short" ? 0.5 : 1));
     this.scores = new Array(numPlayers).fill(0);
     this.history = [];
@@ -158,12 +215,14 @@ class BlackSpiderGame {
     this.trickHistory = [];
     this.playedCards = [];
     this.tricksPlayed = 0;
-    this.passTo = passOffset(this.roundIndex, n);
+    this.passTo = passOffset(this.roundIndex, n, this.rules.passing);
     this.passes = new Array(n).fill(null);   // the cards each seat passes
     this.received = [...Array(n)].map(() => []);
-    this.phase = "pass";
+    this.blackBroken = false;
     this.turn = null;
     this.currentTrick = null;
+    this.phase = "pass";
+    if (!this.passTo) this.beginPlay();      // a hand with no passing: straight into the play
   }
 
   // a seat chooses its three cards to pass (indices into its hand)
@@ -183,25 +242,20 @@ class BlackSpiderGame {
       this.received[to] = this.passes[s].slice();
     }
     for (let s = 0; s < n; s++) this.received[s].forEach(c => this.hands[s].add(c));
-    this.phase = "play";
-    // the holder of red 1 leads
-    const lead = this.hands.findIndex(h => h.cards.some(c => cardCode(c) === FIRST_LEAD));
-    this.turn = lead >= 0 ? lead : this.nextSeat(this.dealer);
-    this.currentTrick = new Trick(this.turn, n);
+    this.beginPlay();
   }
+  beginPlay() {
+    this.phase = "play";
+    // the holder of red 1 leads (or, without that rule, the player left of the dealer)
+    const lead = this.rules.redOne ? this.hands.findIndex(h => h.cards.some(c => cardCode(c) === FIRST_LEAD)) : -1;
+    this.turn = lead >= 0 ? lead : this.nextSeat(this.dealer);
+    this.currentTrick = new Trick(this.turn, this.numPlayers);
+  }
+  get playState() { return { plays: this.currentTrick ? this.currentTrick.plays : [], tricksPlayed: this.tricksPlayed, blackBroken: this.blackBroken }; }
 
   getLegalMovesFor(seat) {
     if (this.phase !== "play" || seat !== this.turn) return [];
-    const cards = this.hands[seat].cards, all = cards.map((_, i) => i);
-    const t = this.currentTrick;
-    if (!t.plays.length) {
-      // leading: anything
-      // the first trick: the holder of the red 1 leads it
-      if (this.tricksPlayed === 0) { const r1 = all.filter(i => cardCode(cards[i]) === FIRST_LEAD); return r1.length ? r1 : all; }
-      return all;
-    }
-    const lead = t.plays[0].card;
-    return followIndices(cards, lead);
+    return legalIndices(this.hands[seat].cards, this.playState, this.rules);
   }
 
   playCard(seat, index) {
@@ -209,6 +263,9 @@ class BlackSpiderGame {
     const card = this.hands[seat].removeAt(index);
     this.currentTrick.addPlay(seat, card);
     this.playedCards.push(card);
+    // black is broken when it's played on a trick led with another colour (leading it, from a hand of nothing but
+    // black, doesn't count)
+    if (card.suit === "K" && this.currentTrick.plays[0].card.suit !== "K") this.blackBroken = true;
     if (this.currentTrick.isComplete()) return { ok: true, card, trickComplete: true };
     this.turn = this.nextSeat(seat);
     return { ok: true, card, trickComplete: false };
@@ -236,7 +293,7 @@ class BlackSpiderGame {
   finishRound() {
     const n = this.numPlayers;
     const blackCount = this.takenCards.map(cs => cs.filter(c => c.suit === "K").length);
-    const sweeper = blackCount.findIndex(k => k === 16);
+    const sweeper = this.rules.sweep ? blackCount.findIndex(k => k === 16) : -1;
     const points = sweeper >= 0 ? [...Array(n)].map((_, s) => s === sweeper ? 0 : SWEEP_PENALTY) : this.taken.slice();
     for (let s = 0; s < n; s++) this.scores[s] += points[s];
     this.history.push({ round: this.roundIndex + 1, points, taken: this.taken.slice(), totals: this.scores.slice(),

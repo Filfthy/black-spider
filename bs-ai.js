@@ -19,11 +19,11 @@ function tableInfo(g) {
     const lead = t.plays[0].card;
     for (const p of t.plays.slice(1)) {
       // not the colour led, and not its number either: they have none of that colour
-      if (p.card.suit !== lead.suit && p.card.rank !== lead.rank) void_[p.who].add(lead.suit);
+      if (!follows(p.card, lead, g.rules || DEFAULT_RULES)) void_[p.who].add(lead.suit);
     }
     if (t.winner >= 0) black[t.winner] += t.plays.filter(p => p.card.suit === "K").length;
   }
-  return { void_, black };
+  return { void_, black, sweep: !g.rules || g.rules.sweep };
 }
 
 // how much a card in hand is a worry: it may end up winning a trick full of points, or be points itself
@@ -153,7 +153,7 @@ function mediumPlay(hand, legal, plays, n, info, me) {
   const pts = i => hand[i].points;
   const cheapest = (arr, highFirst) => arr.reduce((a, b) => (pts(b) < pts(a) || (pts(b) === pts(a) && (highFirst ? hand[b].rank > hand[a].rank : hand[b].rank < hand[a].rank))) ? b : a);
   // stopping a sweep: someone has every black card taken so far, and plenty of them - take a black card off them
-  if (info && winning.length) {
+  if (info && info.sweep !== false && winning.length) {
     const taken = info.black.reduce((a, b) => a + b, 0);
     const leader = info.black.findIndex(b => b === taken);
     const blackHere = plays.some(p => p.card.suit === "K") || winning.some(i => hand[i].suit === "K");
@@ -183,18 +183,12 @@ function playOut(g, handsIn, me, first, blackTaken, knownVoids = null) {
   const n = g.numPlayers;
   const hands = handsIn.map(h => h.slice());
   let plays = g.currentTrick.plays.map(p => ({ who: p.who, card: p.card }));
-  let turn = me, tricksPlayed = g.tricksPlayed, firstMove = true;
+  let turn = me, tricksPlayed = g.tricksPlayed, firstMove = true, broken = !!g.blackBroken;
+  const rules = g.rules || DEFAULT_RULES;
   const pts = g.taken.slice(), black = blackTaken.slice();
   const voids = [...Array(n)].map((_, s) => new Set(knownVoids ? knownVoids[s] : []));   // who can't follow what (known, and seen as it goes)
-  const info = { void_: voids, black };
-  const legalFor = (h) => {
-    const all = h.map((_, i) => i);
-    if (!plays.length) {
-      if (tricksPlayed === 0) { const r1 = all.filter(i => cardCode(h[i]) === FIRST_LEAD); return r1.length ? r1 : all; }
-      return all;
-    }
-    return followIndices(h, plays[0].card);
-  };
+  const info = { void_: voids, black, sweep: rules.sweep };
+  const legalFor = (h) => legalIndices(h, { plays, tricksPlayed, blackBroken: broken }, rules);
   let guard = 0;
   while (guard++ < 400) {
     const h = hands[turn];
@@ -204,7 +198,8 @@ function playOut(g, handsIn, me, first, blackTaken, knownVoids = null) {
     if (firstMove) { i = first; firstMove = false; }
     else i = legal.length === 1 ? legal[0] : mediumPlay(h, legal, plays, n, info, turn);
     const played = h.splice(i, 1)[0];
-    if (knownVoids && plays.length && played.suit !== plays[0].card.suit && played.rank !== plays[0].card.rank) voids[turn].add(plays[0].card.suit);
+    if (knownVoids && plays.length && !follows(played, plays[0].card, rules)) voids[turn].add(plays[0].card.suit);
+    if (played.suit === "K" && plays.length && plays[0].card.suit !== "K") broken = true;   // (on a trick led with another colour)
     plays.push({ who: turn, card: played });
     if (plays.length === n) {
       const w = plays[trickWinnerIndex(plays.map(p => p.card))].who;
@@ -213,7 +208,7 @@ function playOut(g, handsIn, me, first, blackTaken, knownVoids = null) {
       plays = []; tricksPlayed++; turn = w;
     } else turn = (turn + 1) % n;
   }
-  const sweeper = black.findIndex(b => b === 16);
+  const sweeper = rules.sweep ? black.findIndex(b => b === 16) : -1;
   if (sweeper >= 0) return sweeper === me ? -20 : 60;   // (a sweep of my own is better than the 0 it scores: it hurts everyone)
   return pts[me];
 }
