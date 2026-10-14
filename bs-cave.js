@@ -636,8 +636,10 @@ const CAVE = {
       dx = dx * (1 - fw) + fvx / fl * fw; dy = dy * (1 - fw) + fvy / fl * fw;
       const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n;
     }
-    const k = 0.75 + tone / 250;                                        // a pale-ish cave spider: about as light as the rock (0.87-0.97)
-    const dark = `rgb(${Math.round(R * k + 9)},${Math.round(G * k * 0.88 + 6)},${Math.round(B * k * 0.74 + 4)})`;
+    // a dark spider, darker than the lit rock it's on - but in the gloom further in it doesn't go on darkening into
+    // the black: it stays a dark brown that still shows against it
+    const k = 0.4 + tone / 300;
+    const dark = `rgb(${Math.round(Math.max(R * k * 0.55 + 3, 21))},${Math.round(Math.max(G * k * 0.5 + 2, 17))},${Math.round(Math.max(B * k * 0.48 + 2, 14))})`;
     const lit = (f, al) => `rgba(${Math.round(Math.min(255, R * f + 12))},${Math.round(Math.min(255, G * f + 12))},${Math.round(Math.min(255, B * f + 14))},${al})`;
     const ca = Math.cos(a), sa = Math.sin(a);
     const W = (px, py) => [px * ca - py * sa, px * sa + py * ca];      // its own frame -> the scene's
