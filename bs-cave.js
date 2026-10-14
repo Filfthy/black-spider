@@ -97,6 +97,15 @@ const CAVE = {
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.7)");
     c.fillStyle = vg; c.fillRect(0, 0, W, H);
     this.cave = out;
+    // the light as it ends up on screen (after the darkening), at a quarter size, for lighting the spiders
+    this.seen = null;
+    try {
+      const sw = Math.max(1, Math.round(W / 4)), sh = Math.max(1, Math.round(H / 4)), sc = document.createElement("canvas");
+      sc.width = sw; sc.height = sh;
+      const x = sc.getContext("2d", { willReadFrequently: true }); x.imageSmoothingQuality = "high";
+      x.drawImage(out, 0, 0, sw, sh);
+      this.seen = { w: sw, h: sh, d: x.getImageData(0, 0, sw, sh).data };
+    } catch (e) { /* a file:// page can't read its own picture back: the packed light map stands in */ }
     // the spiders: more on a bigger window
     const count = Math.round(Math.min(70, Math.max(24, W * H / 22000)));
     this.spiders = [...Array(count)].map(() => this.newSpider());
@@ -109,7 +118,9 @@ const CAVE = {
   newSpider() {
     let x, y, tries = 0;
     // anywhere it can stand
-    do { x = Math.random() * this.W; y = Math.random() * this.H; } while (!this.walkable(x, y) && tries++ < 300);
+    // anywhere it can stand, more often where there's some light to see it by
+    do { x = Math.random() * this.W; y = Math.random() * this.H; }
+    while ((!this.walkable(x, y) || Math.random() > 0.55 + this.seenAt(x, y, 8)[3] * 3) && tries++ < 300);
     return { x, y, a: Math.random() * Math.PI * 2, turn: 0, base: 0.8 + Math.random() * 0.5, pace: 0.8 + Math.random() * 0.5,
       rest: 0, phase: Math.random() * 10, tone: 30 + Math.random() * 25 };
   },
@@ -193,10 +204,10 @@ const CAVE = {
     const S = Math.min(this.W, this.H) / 900;
     for (const s of this.spiders) {
       const k = this.scaleAt(s.x, s.y);
-      this.drawSpider(c, s.x, s.y, s.a + Math.PI / 2, 11 * S * k * s.base, s.rest > 0 ? 0 : s.phase, s.tone);
+      this.drawSpider(c, s.x, s.y, s.a + Math.PI / 2, 15 * S * k * s.base, s.rest > 0 ? 0 : s.phase, s.tone);
     }
     for (const d of this.danglers) {
-      const x = d.x + Math.sin(d.sway * 0.9) * 3, sz = 11 * S * d.k;
+      const x = d.x + Math.sin(d.sway * 0.9) * 3, sz = 15 * S * d.k;
       c.strokeStyle = "rgba(200,195,190,0.28)"; c.lineWidth = 0.7;
       c.beginPath(); c.moveTo(d.x, 0); c.lineTo(x, d.y); c.stroke();
       this.drawSpider(c, x, d.y + sz, Math.PI, sz, d.state === "hang" ? 0 : d.sway * 4, 40, true);
@@ -288,58 +299,92 @@ const CAVE = {
     c.restore();
   },
 
-  // a small spider facing `a` (0 = up), lit by the cave around it: as dark or as lit as the rock it's on, tinted by
-  // that light, its sheen on the side the light comes from (whichever way it's facing), a soft shadow on the rock
-  // beside it, and softened a little to sit in the photograph
+  // the light on screen at a point, averaged over a small patch (radius r): colour 0-255 and brightness 0-1
+  seenAt(x, y, r = 4) {
+    const m = this.seen;
+    if (!m) { const [lr, lg, lb, l] = this.lightAt(x, y), D = this.DARKEN * 255; return [lr * D, lg * D, lb * D, l * this.DARKEN]; }
+    let R = 0, G = 0, B = 0, n = 0;
+    for (let oy = -r; oy <= r; oy += r || 1) for (let ox = -r; ox <= r; ox += r || 1) {
+      const u = Math.min(m.w - 1, Math.max(0, Math.round((x + ox) / 4))), v = Math.min(m.h - 1, Math.max(0, Math.round((y + oy) / 4)));
+      const i = (v * m.w + u) * 4; R += m.d[i]; G += m.d[i + 1]; B += m.d[i + 2]; n++;
+    }
+    R /= n; G /= n; B /= n;
+    return [R, G, B, (R + G + B) / 765];
+  },
+  // where the light comes from: the scene's key light (above, a little left), turned towards the brighter side nearby
+  seenDir(x, y) {
+    const d = 14 * Math.max(0.6, Math.min(this.W, this.H) / 900);
+    let gx = this.seenAt(x + d, y, 6)[3] - this.seenAt(x - d, y, 6)[3], gy = this.seenAt(x, y + d, 6)[3] - this.seenAt(x, y - d, 6)[3];
+    const l = Math.hypot(gx, gy) || 1, w = Math.min(1, l * 12);
+    gx = -0.3 * (1 - w) + gx / l * w; gy = -0.95 * (1 - w) + gy / l * w;
+    const n = Math.hypot(gx, gy) || 1;
+    return [gx / n, gy / n];
+  },
+  // a small spider facing `a` (0 = up), lit like everything else in the picture: a dark glossy creature, so it's
+  // darker than whatever it's on - a silhouette on lit rock, all but lost in the shadows - with only what the light
+  // there gives it: glints on its back and a thin gleam along the legs on the side the light comes from (in the
+  // scene's terms, so they stay put as it turns), and a soft shadow where there's light to cast one
   drawSpider(c, x, y, a, s, phase, tone, hanging = false) {
-    const [lr, lg, lb, lum] = this.lightAt(x, y), L = Math.min(1, lum * this.DARKEN * 2.2);   // how lit it is (0-1)
-    const [dx, dy] = this.lightDir(x, y);
-    const M = L * 0.4;                                       // a dark creature: only a little of the light lifts it
-    const mix = (base, light) => Math.round(base * (1 - M) + light * M);
-    // its own colour, a dark brown, lifted towards the light's colour where it's lit
-    const body = `rgb(${mix(tone * 0.6, lr * 160)},${mix(tone * 0.44, lg * 150)},${mix(tone * 0.32, lb * 140)})`;
-    const legs = `rgb(${mix(tone * 0.5, lr * 140)},${mix(tone * 0.36, lg * 130)},${mix(tone * 0.26, lb * 122)})`;
+    let [R, G, B, lum] = this.seenAt(x, y, Math.max(2, s * 0.8));
+    // even the darkest corner has a little cold light in it - enough for a faint gleam
+    R = Math.max(R, 30); G = Math.max(G, 32); B = Math.max(B, 38);
+    const L = Math.max(0.32, Math.min(1, lum * 3.2));                                   // how lit it is here (0 dark - 1 well lit)
+    const [dx, dy] = this.seenDir(x, y);
+    const k = 0.4 + tone / 300;                                         // its own darkness against the rock (0.5-0.58)
+    const dark = `rgb(${Math.round(R * k * 0.55 + 3)},${Math.round(G * k * 0.5 + 2)},${Math.round(B * k * 0.48 + 2)})`;
+    const lit = (f, al) => `rgba(${Math.round(Math.min(255, R * f + 12))},${Math.round(Math.min(255, G * f + 12))},${Math.round(Math.min(255, B * f + 14))},${al})`;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const W = (px, py) => [px * ca - py * sa, px * sa + py * ca];      // its own frame -> the scene's
     c.save();
     c.translate(x, y);
-    // the shadow on the rock, cast away from the light (not when it's hanging in the air)
-    if (!hanging) {
-      c.fillStyle = `rgba(0,0,0,${0.25 + 0.35 * L})`; c.filter = `blur(${Math.max(1, s * 0.4)}px)`;
-      c.beginPath(); c.ellipse(-dx * s * 0.6, -dy * s * 0.6 + s * 0.3, s * 1.6, s * 1.2, 0, 0, Math.PI * 2); c.fill();
+    if (!hanging && L > 0.05) {
+      c.fillStyle = `rgba(0,0,0,${0.45 * L})`; c.filter = `blur(${Math.max(1, s * 0.35)}px)`;
+      c.beginPath(); c.ellipse(-dx * s * 0.45, -dy * s * 0.45 + s * 0.2, s * 1.3, s * 1.0, 0, 0, Math.PI * 2); c.fill();
       c.filter = "none";
     }
-    // the spider's shape: legs and body (drawn twice: first nudged towards the light in the light's own colour - the rim
-    // light that catches its edges on the lit side - then itself, dark, on top)
-    const shape = (col, w) => {
-      c.strokeStyle = col; c.fillStyle = col; c.lineWidth = w; c.lineCap = "round"; c.lineJoin = "round";
-      for (let side = -1; side <= 1; side += 2) {
-        for (let k = 0; k < 4; k++) {
-          const base = (-0.55 + k * 0.38) * Math.PI;
-          const step = Math.sin(phase + k * 1.6 + (side > 0 ? Math.PI : 0)) * 0.22;
-          const a1 = base + step, kx = Math.cos(a1) * s * 1.2 * side, ky = Math.sin(a1) * s * 1.1;
-          const fx = kx + Math.cos(a1 + 0.5 * side) * s * 1.1 * side * 0.9, fy = ky + s * (k < 2 ? -0.5 : 0.7);
-          c.beginPath(); c.moveTo(0, 0); c.lineTo(kx, ky - s * 0.25); c.lineTo(fx, fy); c.stroke();
-        }
+    // the legs: two segments each, dark; a thin gleam on the lit side of the segments that lie across the light
+    const lw = Math.max(0.7, s * 0.14), gleams = [];
+    c.strokeStyle = dark; c.lineWidth = lw; c.lineCap = "round"; c.lineJoin = "round";
+    for (let side = -1; side <= 1; side += 2) {
+      for (let j = 0; j < 4; j++) {
+        const base = (-0.55 + j * 0.38) * Math.PI;
+        const step = Math.sin(phase + j * 1.6 + (side > 0 ? Math.PI : 0)) * 0.22;
+        const a1 = base + step, kx = Math.cos(a1) * s * 1.2 * side, ky = Math.sin(a1) * s * 1.1;
+        const fx = kx + Math.cos(a1 + 0.5 * side) * s * 1.1 * side * 0.9, fy = ky + s * (j < 2 ? -0.5 : 0.7);
+        const P = [[0, 0], W(kx, ky - s * 0.25), W(fx, fy)];
+        c.beginPath(); c.moveTo(...P[0]); c.lineTo(...P[1]); c.lineTo(...P[2]); c.stroke();
+        gleams.push(P);
       }
-      c.beginPath(); c.ellipse(0, s * 0.75, s * 0.62, s * 0.8, 0, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.ellipse(0, -s * 0.25, s * 0.4, s * 0.42, 0, 0, Math.PI * 2); c.fill();
+    }
+    if (L > 0.04) {
+      c.lineWidth = Math.max(0.5, lw * 0.45);
+      for (const P of gleams) for (let q = 0; q < 2; q++) {
+        const [x1, y1] = P[q], [x2, y2] = P[q + 1], len = Math.hypot(x2 - x1, y2 - y1) || 1;
+        let nx = -(y2 - y1) / len, ny = (x2 - x1) / len;
+        if (nx * dx + ny * dy < 0) { nx = -nx; ny = -ny; }
+        const face = nx * dx + ny * dy;                                 // 1: lying square across the light
+        if (face < 0.3) continue;
+        const o = lw * 0.3;
+        c.strokeStyle = lit(1.6 + L, (0.8 * L * face).toFixed(3));
+        c.beginPath(); c.moveTo(x1 + nx * o, y1 + ny * o); c.lineTo(x2 + nx * o, y2 + ny * o); c.stroke();
+      }
+    }
+    // the body: abdomen and head, each a dark dome shaded from the light side
+    const dome = (cx, cy, rx, ry, spec) => {
+      const [px, py] = W(cx, cy), hx = px + dx * rx * 0.45, hy = py + dy * ry * 0.45;
+      const g = c.createRadialGradient(hx, hy, 0, px, py, Math.max(rx, ry) * 1.05);
+      g.addColorStop(0, lit(0.75 + 0.6 * L, 1)); g.addColorStop(0.6, dark); g.addColorStop(1, dark);
+      c.fillStyle = g;
+      c.beginPath(); c.ellipse(px, py, rx, ry, a, 0, Math.PI * 2); c.fill();
+      if (L > 0.06) {                                                   // the glint: the light, reflected
+        const sx = px + dx * rx * 0.5, sy = py + dy * ry * 0.5, sr = Math.max(0.6, rx * spec);
+        const h = c.createRadialGradient(sx, sy, 0, sx, sy, sr);
+        h.addColorStop(0, lit(2.4 + 1.5 * L, Math.min(1, 0.9 * L + 0.1).toFixed(3))); h.addColorStop(1, lit(2, 0));
+        c.fillStyle = h; c.beginPath(); c.arc(sx, sy, sr, 0, Math.PI * 2); c.fill();
+      }
     };
-    const rimK = Math.min(1, 0.6 + L * 1.6), off = Math.max(0.8, s * 0.13);
-    const rim = `rgba(${Math.round(Math.min(255, 95 + lr * 420))},${Math.round(Math.min(255, 92 + lg * 420))},${Math.round(Math.min(255, 95 + lb * 430))},${0.7 * rimK})`;
-    c.save(); c.translate(dx * off, dy * off); c.rotate(a); shape(rim, Math.max(0.8, s * 0.17)); c.restore();
-    c.save(); c.rotate(a); c.fillStyle = body; shape(legs, Math.max(0.6, s * 0.14));
-    c.fillStyle = body;
-    c.beginPath(); c.ellipse(0, s * 0.75, s * 0.6, s * 0.78, 0, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.ellipse(0, -s * 0.25, s * 0.38, s * 0.4, 0, 0, Math.PI * 2); c.fill();
-    c.restore();
-    // the sheen: on the abdomen, towards the light (in the scene's terms, so it stays put as the spider turns)
-    const ax = -Math.sin(a) * s * 0.75, ay = Math.cos(a) * s * 0.75;        // the abdomen's centre, unrotated
-    const hx = ax + dx * s * 0.32, hy = ay + dy * s * 0.32;
-    const g = c.createRadialGradient(hx, hy, 0, hx, hy, s * 0.55);
-    g.addColorStop(0, `rgba(${Math.round(110 + lr * 145)},${Math.round(100 + lg * 145)},${Math.round(95 + lb * 150)},${0.28 + 0.5 * L})`);
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    c.fillStyle = g;
-    c.save(); c.rotate(a); c.beginPath(); c.ellipse(0, s * 0.75, s * 0.62, s * 0.8, 0, 0, Math.PI * 2); c.restore();
-    c.fill();
+    dome(0, s * 0.75, s * 0.6, s * 0.78, 0.45);
+    dome(0, -s * 0.25, s * 0.38, s * 0.4, 0.4);
     c.restore();
   }
 };
