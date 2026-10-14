@@ -14,6 +14,10 @@ const CAVE = {
   still: !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches),
   // the queen, in the picture's own pixels (1536 x 1024): where her eyes are, and how big
   QUEEN: { x: 1065, y: 395, size: 1 },
+  // the stalactite tips that drip (picture coordinates): [x, y of the tip, y where the drop lands, lands in water]
+  // (where each lands: the first ground below it at the same depth, from the depth map)
+  DRIPS: [[575, 283, 693, false], [710, 297, 600, false], [814, 166, 615, false], [1050, 296, 705, true],
+          [1236, 353, 725, true], [350, 146, 481, false]],
 
   setActive(on) {
     this.active = on;
@@ -106,12 +110,147 @@ const CAVE = {
       x.drawImage(out, 0, 0, sw, sh);
       this.seen = { w: sw, h: sh, d: x.getImageData(0, 0, sw, sh).data };
     } catch (e) { /* a file:// page can't read its own picture back: the packed light map stands in */ }
+    this.buildMist();
+    this.drips = []; this.nextDrip = 2 + Math.random() * 4;
     // the spiders: more on a bigger window
     const count = Math.round(Math.min(70, Math.max(24, W * H / 22000)));
     this.spiders = [...Array(count)].map(() => this.newSpider());
     this.danglers = [];
     this.nextDangle = 4 + Math.random() * 8;
     this.draw(performance.now() / 1000);
+  },
+
+  // ---------------------------------------------------------------- the mist
+  // where it lies (a small mask, blurred): along the floor of the cave, thicker the further down the tunnel, and seen
+  // by the light there is to see it by; and its texture, soft noise that tiles, which drifts through that mask
+  buildMist() {
+    const W = this.W, H = this.H, f = this.f, n = 6, mw = Math.ceil(W / n), mh = Math.ceil(H / n);
+    const raw = document.createElement("canvas"); raw.width = mw; raw.height = mh;
+    const rc = raw.getContext("2d"), img = rc.createImageData(mw, mh);
+    const sm = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+    for (let j = 0; j < mh; j++) for (let i = 0; i < mw; i++) {
+      const x = (i + 0.5) * n, y = (j + 0.5) * n, iy = (y - f.oy) / f.k, d = this.depth(x, y);
+      const floor = sm(500, 760, iy) * (0.5 + 0.5 * (1 - d));                  // lying on the ground
+      const deep = (1 - d) ** 2 * sm(380, 640, iy) * 0.85;                     // filling the far tunnel
+      const seen = 0.6 + Math.min(1, this.seenAt(x, y, 6)[3] * 5) * 0.7;
+      img.data[(j * mw + i) * 4 + 3] = Math.round(255 * Math.min(1, Math.max(floor, deep) * seen));
+    }
+    rc.putImageData(img, 0, 0);
+    const mask = document.createElement("canvas"); mask.width = mw; mask.height = mh;
+    const mc = mask.getContext("2d"); mc.filter = "blur(3px)"; mc.drawImage(raw, 0, 0);
+    this.mistMask = mask;
+    this.mist = document.createElement("canvas"); this.mist.width = mw; this.mist.height = mh;
+    this.mistCtx = this.mist.getContext("2d");
+    if (!this.mistTex) {
+      // soft noise that tiles: a few octaves of smoothed random values on a wrapping lattice
+      const tw = 128, th = 64, tex = document.createElement("canvas"); tex.width = tw; tex.height = th;
+      const tc = tex.getContext("2d"), td = tc.createImageData(tw, th), oct = [];
+      for (const cells of [4, 8, 16]) {
+        const ch = cells / 2, g = [...Array(cells * ch)].map(() => Math.random());
+        oct.push({ cells, ch, g });
+      }
+      for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) {
+        let v = 0, w = 0, amp = 1;
+        for (const o of oct) {
+          const fx = x / tw * o.cells, fy = y / th * o.ch, x0 = Math.floor(fx), y0 = Math.floor(fy);
+          const sx = (fx - x0) ** 2 * (3 - 2 * (fx - x0)), sy = (fy - y0) ** 2 * (3 - 2 * (fy - y0));
+          const G = (a, b) => o.g[(b % o.ch) * o.cells + (a % o.cells)];
+          const top = G(x0, y0) * (1 - sx) + G(x0 + 1, y0) * sx, bot = G(x0, y0 + 1) * (1 - sx) + G(x0 + 1, y0 + 1) * sx;
+          v += (top * (1 - sy) + bot * sy) * amp; w += amp; amp *= 0.5;
+        }
+        v /= w;
+        const i = (y * tw + x) * 4;
+        td.data[i] = 178; td.data[i + 1] = 184; td.data[i + 2] = 196;
+        td.data[i + 3] = Math.round(255 * Math.min(1, Math.max(0, (v - 0.32) * 2.2)));
+      }
+      tc.putImageData(td, 0, 0);
+      this.mistTex = tex;
+    }
+    this.mistPat = this.mistCtx.createPattern(this.mistTex, "repeat");
+  },
+  // the mist, drifting slowly out of the tunnel towards us; tinged red by her eyes near her
+  drawMist(c, t) {
+    const m = this.mistCtx, mw = this.mist.width, mh = this.mist.height, S = mh / 64;
+    m.globalCompositeOperation = "source-over"; m.clearRect(0, 0, mw, mh);
+    const layer = (scale, vx, vy, al) => {
+      const tw = 128 * scale * S, th = 64 * scale * S;
+      this.mistPat.setTransform(new DOMMatrix().translate((t * vx) % tw, (t * vy) % th).scale(scale * S));
+      m.globalAlpha = al; m.fillStyle = this.mistPat; m.fillRect(0, 0, mw, mh);
+    };
+    layer(2.2, -2.2, 0.35, 0.75);
+    layer(1.3, -3.6, 0.6, 0.55);
+    m.globalAlpha = 1;
+    m.globalCompositeOperation = "destination-in"; m.drawImage(this.mistMask, 0, 0);
+    // her eyes' glow, caught in the mist around her
+    const q = this.queen, f = this.f, qx = (f.ox + this.QUEEN.x * f.k) / this.W * mw, qy = (f.oy + this.QUEEN.y * f.k) / this.H * mh;
+    const r = 260 * f.k / this.W * mw, glow = 0.4 + 0.1 * Math.sin(t * 0.6) + 0.7 * q.flare;
+    m.globalCompositeOperation = "source-atop";
+    const g = m.createRadialGradient(qx, qy, 0, qx, qy, r);
+    g.addColorStop(0, `rgba(150,20,10,${0.55 * glow})`); g.addColorStop(1, "rgba(150,20,10,0)");
+    m.fillStyle = g; m.fillRect(0, 0, mw, mh);
+    m.globalCompositeOperation = "source-over";
+    c.save(); c.globalAlpha = 0.8; c.imageSmoothingQuality = "high";
+    c.drawImage(this.mist, 0, 0, this.W, this.H);
+    c.restore();
+  },
+
+  // ---------------------------------------------------------------- the drips
+  updateDrips(dt) {
+    const f = this.f;
+    this.nextDrip -= dt;
+    if (this.nextDrip <= 0) {
+      const [ix, iy, ly, wet] = this.DRIPS[Math.floor(Math.random() * this.DRIPS.length)];
+      const x = f.ox + ix * f.k, y = f.oy + iy * f.k, land = f.oy + ly * f.k;
+      if (x > 0 && x < this.W && y > 0 && land < this.H + 20) {
+        const dist = land - y, T = 0.42 + 0.3 * dist / this.H;          // a longer fall takes longer
+        this.drips.push({ x, y, land, wet, g: 2 * dist / (T * T), st: "form", t: 0, fy: 0, v: 0,
+          k: this.scaleAt(x, Math.min(this.H - 1, land)) });
+      }
+      this.nextDrip = 3 + Math.random() * 7;
+    }
+    for (const d of this.drips) {
+      d.t += dt;
+      if (d.st === "form") { if (d.t > 1.4) { d.st = "fall"; d.t = 0; } }
+      else if (d.st === "fall") {
+        d.v += d.g * dt; d.fy += d.v * dt;
+        if (d.y + d.fy >= d.land) { d.st = "splash"; d.t = 0; if (this.onDrip) this.onDrip(d.wet ? 1 : 0.6); }
+      }
+    }
+    this.drips = this.drips.filter(d => !(d.st === "splash" && d.t > 1.6));
+  },
+  // a drop: a bead swelling at the tip, falling as a short streak, then rings on the water (or a fleck off the rock),
+  // all of it only as bright as the light there
+  drawDrips(c) {
+    const S = Math.min(this.W, this.H) / 900;
+    for (const d of this.drips) {
+      const yy = d.st === "splash" ? d.land : d.y + d.fy;
+      const [R, G, B] = this.seenAt(d.x, yy, 3);
+      const col = a => `rgba(${Math.min(255, Math.round(R * 2.6 + 50))},${Math.min(255, Math.round(G * 2.6 + 52))},${Math.min(255, Math.round(B * 2.6 + 60))},${a})`;
+      if (d.st === "form") {
+        const r = Math.max(0.6, 1.6 * S * Math.min(1, d.t / 1.4));
+        c.fillStyle = col(0.55); c.beginPath(); c.ellipse(d.x, d.y + r, r * 0.8, r, 0, 0, Math.PI * 2); c.fill();
+      } else if (d.st === "fall") {
+        const len = Math.max(2, Math.min(18 * S, d.v * 0.025));
+        const g = c.createLinearGradient(d.x, yy - len, d.x, yy);
+        g.addColorStop(0, col(0)); g.addColorStop(1, col(0.6));
+        c.strokeStyle = g; c.lineWidth = Math.max(0.8, 1.3 * S); c.lineCap = "round";
+        c.beginPath(); c.moveTo(d.x, yy - len); c.lineTo(d.x, yy); c.stroke();
+      } else if (d.wet) {
+        for (const lag of [0, 0.35]) {
+          const p = (d.t - lag) / 1.2; if (p <= 0 || p >= 1) continue;
+          const rx = (3 + 22 * p) * S * d.k;
+          c.strokeStyle = col((0.45 * (1 - p)).toFixed(3)); c.lineWidth = Math.max(0.6, 1.1 * S * (1 - p * 0.5));
+          c.beginPath(); c.ellipse(d.x, d.land, rx, rx * 0.28, 0, 0, Math.PI * 2); c.stroke();
+        }
+      } else if (d.t < 0.35) {
+        const p = d.t / 0.35;
+        c.fillStyle = col((0.6 * (1 - p)).toFixed(3));
+        for (const sx of [-1, 1, 0]) {
+          const px = d.x + sx * 6 * S * p, py = d.land - (sx ? 5 : 8) * S * Math.sin(p * Math.PI);
+          c.beginPath(); c.arc(px, py, Math.max(0.5, 0.9 * S), 0, Math.PI * 2); c.fill();
+        }
+      }
+    }
   },
 
   // ---------------------------------------------------------------- the spiders
@@ -160,6 +299,7 @@ const CAVE = {
       s.phase += dt * 9 * s.pace;
       if (Math.random() < dt * 0.12) s.rest = 0.4 + Math.random() * 2.2;
     }
+    this.updateDrips(dt);
     // now and then one lowers itself from the roof on a thread, hangs a while and climbs back
     this.nextDangle -= dt;
     if (this.nextDangle <= 0 && this.danglers.length < 2) {
@@ -206,6 +346,8 @@ const CAVE = {
       const k = this.scaleAt(s.x, s.y);
       this.drawSpider(c, s.x, s.y, s.a + Math.PI / 2, 15 * S * k * s.base, s.rest > 0 ? 0 : s.phase, s.tone);
     }
+    this.drawMist(c, this.still ? 0 : t);
+    this.drawDrips(c);
     for (const d of this.danglers) {
       const x = d.x + Math.sin(d.sway * 0.9) * 3, sz = 15 * S * d.k;
       c.strokeStyle = "rgba(200,195,190,0.28)"; c.lineWidth = 0.7;
