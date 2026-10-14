@@ -131,14 +131,18 @@ const CAVE = {
       let seed = 7;
       const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
       const spots = [];
-      for (let tries = 0; tries < 4000 && spots.length < 7; tries++) {
-        const ix = 40 + rnd() * 1456, iy = 120 + rnd() * 880, x = f.ox + ix * f.k, y = f.oy + iy * f.k;
+      for (let tries = 0; tries < 6000 && spots.length < 15; tries++) {
+        // mostly high up, and as many on the right as the left
+        const left = spots.filter(([sx]) => sx < 768).length, right = spots.length - left;
+        const ix = left > right ? 768 + rnd() * 738 : left < right ? 30 + rnd() * 738 : 30 + rnd() * 1476;
+        const iy = 30 + rnd() ** 2.4 * 950, x = f.ox + ix * f.k, y = f.oy + iy * f.k;
+        if (iy > 560 && rnd() < 0.6) continue;
         if (x < 4 || x > W - 4 || y < 4 || y > H - 4 || !this.walkable(x, y)) continue;
         const d = this.depth(x, y), [r, , b, lum] = this.seenAt(x, y, 8);
         if (d < 0.12 || lum > 0.07 || lum < 0.008) continue;                  // dark, but not the black void
-        if (b > r * 0.95) continue;                                            // on the brown rock, not the grey webs
+        if (b > r * 1.05) continue;                                            // on the rock, not the grey webs
         if (Math.abs(ix - 768) < 380 && iy > 330) continue;                    // not behind the cards
-        if (spots.some(([sx, sy]) => Math.hypot(sx - ix, sy - iy) < 170)) continue;
+        if (spots.some(([sx, sy]) => Math.hypot(sx - ix, sy - iy) < 130)) continue;
         const caps = [...Array(4 + Math.floor(rnd() * 6))].map(() => [(rnd() - 0.5) * 2, (rnd() - 0.5) * 0.9, 0.5 + rnd() * 0.7]);
         const specks = [...Array(6 + Math.floor(rnd() * 8))].map(() => [(rnd() - 0.5) * 3.4, (rnd() - 0.4) * 1.4, rnd()]);
         spots.push([ix, iy, caps, specks, rnd() * 100, 0.6 + rnd() * 0.5]);
@@ -341,12 +345,22 @@ const CAVE = {
   // ---------------------------------------------------------------- the spiders
   newSpider() {
     let x, y, tries = 0;
-    // anywhere it can stand
     // anywhere it can stand, more often where there's some light to see it by
     do { x = Math.random() * this.W; y = Math.random() * this.H; }
     while ((!this.walkable(x, y) || Math.random() > 0.55 + this.seenAt(x, y, 8)[3] * 3) && tries++ < 300);
     return { x, y, a: Math.random() * Math.PI * 2, turn: 0, base: 0.8 + Math.random() * 0.5, pace: 0.8 + Math.random() * 0.5,
-      rest: 0, phase: Math.random() * 10, tone: 30 + Math.random() * 25 };
+      rest: 0, phase: Math.random() * 10, tone: 30 + Math.random() * 25, dark: 0, fade: 1 };
+  },
+  // somewhere worth heading for: lit rock it can stand on, out from behind the cards in the middle
+  goalSpot() {
+    const W = this.W, H = this.H;
+    for (let i = 0; i < 12; i++) {
+      const x = Math.random() * W, y = Math.random() * H;
+      if (!this.walkable(x, y) || this.seenAt(x, y, 6)[3] < 0.045) continue;
+      if (Math.abs(x - W / 2) < W * 0.24 && Math.abs(y - H * 0.55) < H * 0.3) continue;
+      return [x, y];
+    }
+    return null;
   },
   // how big a spider is here: a giant's whisker up close, a speck deep in the cave
   scaleAt(x, y) { const d = this.depth(x, y); return 0.45 + 0.75 * d; },
@@ -370,7 +384,8 @@ const CAVE = {
       if (s.rest > 0) { s.rest -= dt; continue; }
       s.turn += (Math.random() - 0.5) * 6 * dt; s.turn *= 0.96;
       s.a += s.turn * dt * 2;
-      if (!s.goal && Math.random() < dt * 0.04) s.goal = [Math.random() * W, Math.random() * H];
+      if (!s.goal && Math.random() < dt * 0.05) s.goal = this.goalSpot();
+      if (s.fade < 1) s.fade = Math.min(1, s.fade + dt * 0.7);
       if (s.goal) {
         const ga = Math.atan2(s.goal[1] - s.y, s.goal[0] - s.x), da = Math.atan2(Math.sin(ga - s.a), Math.cos(ga - s.a));
         s.a += da * Math.min(1, dt * 1.5);
@@ -380,6 +395,12 @@ const CAVE = {
       const nx = s.x + Math.cos(s.a) * sp * dt, ny = s.y + Math.sin(s.a) * sp * dt;
       // nothing to stand on there (the void, off the picture): turn back
       if (!this.walkable(nx, ny) || nx < 0 || nx > W || ny < 0 || ny > H) { s.a += Math.PI * (0.5 + Math.random()); s.turn = 0; s.goal = null; continue; }
+      // they keep out of the deepest dark, mostly (it's a soft edge, like the end of the rock)
+      const here = this.seenAt(nx, ny, 4)[3];
+      if (here < 0.022 && Math.random() < 0.6 && here < this.seenAt(s.x, s.y, 4)[3]) { s.a += Math.PI * (0.4 + Math.random() * 0.6) * (Math.random() < 0.5 ? -1 : 1); s.turn = 0; continue; }
+      // one that's been lost in the black too long goes off somewhere, and another comes out where it can be seen
+      s.dark = here < 0.03 ? s.dark + dt : 0;
+      if (s.dark > 15) { Object.assign(s, this.newSpider(), { fade: 0 }); continue; }
       s.x = nx; s.y = ny;
       s.phase += dt * 9 * s.pace;
       if (Math.random() < dt * 0.12) s.rest = 0.4 + Math.random() * 2.2;
@@ -431,7 +452,9 @@ const CAVE = {
     const S = Math.min(this.W, this.H) / 900;
     for (const s of this.spiders) {
       const k = this.scaleAt(s.x, s.y);
+      if (s.fade < 1) c.globalAlpha = s.fade;
       this.drawSpider(c, s.x, s.y, s.a + Math.PI / 2, 15 * S * k * s.base, s.rest > 0 ? 0 : s.phase, s.tone);
+      c.globalAlpha = 1;
     }
     this.drawMist(c, this.still ? 0 : t);
     this.drawDrips(c);
