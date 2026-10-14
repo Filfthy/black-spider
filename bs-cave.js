@@ -110,6 +110,7 @@ const CAVE = {
       x.drawImage(out, 0, 0, sw, sh);
       this.seen = { w: sw, h: sh, d: x.getImageData(0, 0, sw, sh).data };
     } catch (e) { /* a file:// page can't read its own picture back: the packed light map stands in */ }
+    this.buildFox();
     this.buildMist();
     this.drips = []; this.nextDrip = 2 + Math.random() * 4;
     // the spiders: more on a bigger window
@@ -118,6 +119,81 @@ const CAVE = {
     this.danglers = [];
     this.nextDangle = 4 + Math.random() * 8;
     this.draw(performance.now() / 1000);
+  },
+
+  // ---------------------------------------------------------------- the foxfire
+  // a few clusters of glowing fungus in the dark crevices: chosen once (in picture coordinates, so they stay put on
+  // the rock when the window changes), on ground the spiders could walk, where the picture is dark, out of the way of
+  // the cards in the middle; each a little cluster of caps and specks
+  buildFox() {
+    const f = this.f, W = this.W, H = this.H;
+    if (!this.foxSpots) {
+      let seed = 7;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const spots = [];
+      for (let tries = 0; tries < 4000 && spots.length < 7; tries++) {
+        const ix = 40 + rnd() * 1456, iy = 120 + rnd() * 880, x = f.ox + ix * f.k, y = f.oy + iy * f.k;
+        if (x < 4 || x > W - 4 || y < 4 || y > H - 4 || !this.walkable(x, y)) continue;
+        const d = this.depth(x, y), [r, , b, lum] = this.seenAt(x, y, 8);
+        if (d < 0.12 || lum > 0.07 || lum < 0.008) continue;                  // dark, but not the black void
+        if (b > r * 0.95) continue;                                            // on the brown rock, not the grey webs
+        if (Math.abs(ix - 768) < 380 && iy > 330) continue;                    // not behind the cards
+        if (spots.some(([sx, sy]) => Math.hypot(sx - ix, sy - iy) < 170)) continue;
+        const caps = [...Array(4 + Math.floor(rnd() * 6))].map(() => [(rnd() - 0.5) * 2, (rnd() - 0.5) * 0.9, 0.5 + rnd() * 0.7]);
+        const specks = [...Array(6 + Math.floor(rnd() * 8))].map(() => [(rnd() - 0.5) * 3.4, (rnd() - 0.4) * 1.4, rnd()]);
+        spots.push([ix, iy, caps, specks, rnd() * 100, 0.6 + rnd() * 0.5]);
+      }
+      this.foxSpots = spots;
+    }
+    // on screen now: position, size (by depth), and how it breathes
+    this.fox = this.foxSpots.map(([ix, iy, caps, specks, ph, sz]) => {
+      const x = f.ox + ix * f.k, y = f.oy + iy * f.k;
+      return { x, y, caps, specks, ph, u: 14 * sz * this.scaleAt(x, y) * Math.min(W, H) / 900, b: 0.7 };
+    }).filter(p => p.x > -20 && p.x < W + 20 && p.y > -20 && p.y < H + 20);
+  },
+  // each glows on its own slow rhythm, and shrinks back when she stirs
+  updateFox(t) {
+    const q = this.queen;
+    for (const p of this.fox) p.b = (0.62 + 0.22 * Math.sin(t * 0.21 + p.ph) + 0.12 * Math.sin(t * 0.083 + p.ph * 1.7)) * (1 - 0.65 * q.flare);
+  },
+  // the light the foxfire throws on something at (x, y): its colour, and where it comes from
+  foxLight(x, y) {
+    let R = 0, G = 0, B = 0, vx = 0, vy = 0;
+    for (const p of this.fox) {
+      const rad = p.u * 7, dist = Math.hypot(p.x - x, p.y - y);
+      if (dist >= rad) continue;
+      const w = p.b * (1 - dist / rad) ** 2;
+      R += 25 * w; G += 120 * w; B += 80 * w;
+      vx += (p.x - x) / (dist || 1) * w; vy += (p.y - y) / (dist || 1) * w;
+    }
+    return [R, G, B, vx, vy];
+  },
+  drawFox(c) {
+    c.save(); c.globalCompositeOperation = "lighter";
+    for (const p of this.fox) {
+      const u = p.u, b = p.b;
+      // the faint light it casts on the rock round it
+      const h = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, u * 8);
+      h.addColorStop(0, `rgba(35,140,95,${0.32 * b})`); h.addColorStop(0.3, `rgba(22,95,68,${0.12 * b})`); h.addColorStop(1, "rgba(0,40,30,0)");
+      c.fillStyle = h; c.beginPath(); c.arc(p.x, p.y, u * 8, 0, Math.PI * 2); c.fill();
+      // the threads of it through the rock: specks, each flickering a little on its own
+      for (const [sx, sy, k] of p.specks) {
+        const a = b * (0.35 + 0.3 * Math.sin(k * 40 + b * 6));
+        c.fillStyle = `rgba(110,240,170,${(0.5 * a).toFixed(3)})`;
+        c.beginPath(); c.arc(p.x + sx * u, p.y + sy * u, Math.max(0.5, u * 0.09), 0, Math.PI * 2); c.fill();
+      }
+      // the caps: little domes on short stems, brightest underneath where the gills are
+      for (const [cx, cy, r] of p.caps) {
+        const x = p.x + cx * u, y = p.y + cy * u, cr = u * 0.52 * r;
+        c.strokeStyle = `rgba(70,170,120,${(0.35 * b).toFixed(3)})`; c.lineWidth = Math.max(0.5, cr * 0.25);
+        c.beginPath(); c.moveTo(x, y + cr * 0.15); c.lineTo(x + cr * 0.1, y + cr * 1.2); c.stroke();
+        const g = c.createRadialGradient(x, y + cr * 0.1, 0, x, y, cr * 1.3);
+        g.addColorStop(0, `rgba(170,255,200,${(0.85 * b).toFixed(3)})`); g.addColorStop(0.5, `rgba(60,200,130,${(0.45 * b).toFixed(3)})`);
+        g.addColorStop(1, "rgba(20,90,60,0)");
+        c.fillStyle = g; c.beginPath(); c.ellipse(x, y, cr * 1.3, cr * 0.75, 0, Math.PI, 0); c.closePath(); c.fill();
+      }
+    }
+    c.restore();
   },
 
   // ---------------------------------------------------------------- the mist
@@ -330,6 +406,7 @@ const CAVE = {
     const q = this.queen;
     q.t += dt;
     q.flare = Math.max(0, q.flare - dt * 0.6);
+    this.foxT = (this.foxT || 0) + dt; this.updateFox(this.foxT);
     q.nextBlink -= dt;
     if (q.nextBlink <= 0) { q.blink.push({ pair: Math.floor(Math.random() * 4), t: 0 }); q.nextBlink = 4 + Math.random() * 9; }
     q.blink.forEach(b => b.t += dt); q.blink = q.blink.filter(b => b.t < 0.35);
@@ -350,6 +427,7 @@ const CAVE = {
     c.drawImage(this.cave, 0, 0);
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.drawQueen(c, t);
+    this.drawFox(c);
     const S = Math.min(this.W, this.H) / 900;
     for (const s of this.spiders) {
       const k = this.scaleAt(s.x, s.y);
@@ -479,8 +557,17 @@ const CAVE = {
     let [R, G, B, lum] = this.seenAt(x, y, Math.max(2, s * 0.8));
     // even the darkest corner has a little cold light in it - enough for a faint gleam
     R = Math.max(R, 30); G = Math.max(G, 32); B = Math.max(B, 38);
+    // and any foxfire nearby: its green light, and the light then comes from there as much as from above
+    const [fr, fg, fb, fvx, fvy] = this.fox ? this.foxLight(x, y) : [0, 0, 0, 0, 0];
+    R += fr; G += fg; B += fb; lum += (fr + fg + fb) / 765;
     const L = Math.max(0.32, Math.min(1, lum * 3.2));                                   // how lit it is here (0 dark - 1 well lit)
-    const [dx, dy] = this.seenDir(x, y);
+    let [dx, dy] = this.seenDir(x, y);
+    const fw = Math.min(1, Math.hypot(fvx, fvy) * 1.5);
+    if (fw > 0.02) {
+      const fl = Math.hypot(fvx, fvy);
+      dx = dx * (1 - fw) + fvx / fl * fw; dy = dy * (1 - fw) + fvy / fl * fw;
+      const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n;
+    }
     const k = 0.4 + tone / 300;                                         // its own darkness against the rock (0.5-0.58)
     const dark = `rgb(${Math.round(R * k * 0.55 + 3)},${Math.round(G * k * 0.5 + 2)},${Math.round(B * k * 0.48 + 2)})`;
     const lit = (f, al) => `rgba(${Math.round(Math.min(255, R * f + 12))},${Math.round(Math.min(255, G * f + 12))},${Math.round(Math.min(255, B * f + 14))},${al})`;
