@@ -839,6 +839,7 @@ class GameController {
     else if (pts < 0) this.react(w, "win", 2600);
     done.add(w);
     spiders.forEach(p => { if (!done.has(p.who)) { this.react(p.who, "win", 2600); done.add(p.who); } });
+    if (spiders.length && typeof CAVE !== "undefined") CAVE.flare();   // the queen in the cave stirs
     if (spiders.length) this.showToast(`${w === 0 ? "You take" : this.seatName(w) + " takes"} ${spiders.length === 1 ? "a Black Spider" : spiders.length + " Black Spiders"}!`);
   }
 
