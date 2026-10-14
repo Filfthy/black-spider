@@ -126,19 +126,27 @@ const CAVE = {
   buildMist() {
     const W = this.W, H = this.H, f = this.f, n = 6, mw = Math.ceil(W / n), mh = Math.ceil(H / n);
     const raw = document.createElement("canvas"); raw.width = mw; raw.height = mh;
-    const rc = raw.getContext("2d"), img = rc.createImageData(mw, mh);
+    const rc = raw.getContext("2d"), img = rc.createImageData(mw, mh), cimg = rc.createImageData(mw, mh);
     const sm = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
     for (let j = 0; j < mh; j++) for (let i = 0; i < mw; i++) {
       const x = (i + 0.5) * n, y = (j + 0.5) * n, iy = (y - f.oy) / f.k, d = this.depth(x, y);
       const floor = sm(500, 760, iy) * (0.5 + 0.5 * (1 - d));                  // lying on the ground
       const deep = (1 - d) ** 2 * sm(380, 640, iy) * 0.85;                     // filling the far tunnel
-      const seen = 0.6 + Math.min(1, this.seenAt(x, y, 6)[3] * 5) * 0.7;
-      img.data[(j * mw + i) * 4 + 3] = Math.round(255 * Math.min(1, Math.max(floor, deep) * seen));
+      // its colour: the light it scatters there - lit mist glows a little, mist in the dark is dark (it only hides)
+      const [R, G, B] = this.seenAt(x, y, 6), o = (j * mw + i) * 4;
+      cimg.data[o] = Math.min(255, R * 1.2 + 3); cimg.data[o + 1] = Math.min(255, G * 1.2 + 3); cimg.data[o + 2] = Math.min(255, B * 1.25 + 4);
+      cimg.data[o + 3] = 255;
+      img.data[o + 3] = Math.round(255 * Math.min(1, Math.max(floor, deep)));
     }
     rc.putImageData(img, 0, 0);
     const mask = document.createElement("canvas"); mask.width = mw; mask.height = mh;
     const mc = mask.getContext("2d"); mc.filter = "blur(3px)"; mc.drawImage(raw, 0, 0);
     this.mistMask = mask;
+    // (and its colour alone, solid, to paint the drifting mist with)
+    const col = document.createElement("canvas"); col.width = mw; col.height = mh;
+    const cr = document.createElement("canvas"); cr.width = mw; cr.height = mh; cr.getContext("2d").putImageData(cimg, 0, 0);
+    const cc = col.getContext("2d"); cc.drawImage(cr, 0, 0); cc.filter = "blur(3px)"; cc.drawImage(cr, 0, 0);
+    this.mistCol = col;
     this.mist = document.createElement("canvas"); this.mist.width = mw; this.mist.height = mh;
     this.mistCtx = this.mist.getContext("2d");
     if (!this.mistTex) {
@@ -181,6 +189,7 @@ const CAVE = {
     layer(1.3, -3.6, 0.6, 0.55);
     m.globalAlpha = 1;
     m.globalCompositeOperation = "destination-in"; m.drawImage(this.mistMask, 0, 0);
+    m.globalCompositeOperation = "source-in"; m.drawImage(this.mistCol, 0, 0);
     // her eyes' glow, caught in the mist around her
     const q = this.queen, f = this.f, qx = (f.ox + this.QUEEN.x * f.k) / this.W * mw, qy = (f.oy + this.QUEEN.y * f.k) / this.H * mh;
     const r = 260 * f.k / this.W * mw, glow = 0.4 + 0.1 * Math.sin(t * 0.6) + 0.7 * q.flare;
