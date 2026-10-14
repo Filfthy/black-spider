@@ -113,6 +113,7 @@ const CAVE = {
     this.buildFox();
     this.buildMist();
     this.drips = []; this.nextDrip = 2 + Math.random() * 4;
+    this.scanCover();
     // the spiders: more on a bigger window
     const count = Math.round(Math.min(70, Math.max(24, W * H / 22000)));
     this.spiders = [...Array(count)].map(() => this.newSpider());
@@ -347,9 +348,40 @@ const CAVE = {
     let x, y, tries = 0;
     // anywhere it can stand, more often where there's some light to see it by
     do { x = Math.random() * this.W; y = Math.random() * this.H; }
-    while ((!this.walkable(x, y) || Math.random() > 0.55 + this.seenAt(x, y, 8)[3] * 3) && tries++ < 300);
+    while ((!this.walkable(x, y) || this.covered(x, y) || Math.random() > 0.55 + this.seenAt(x, y, 8)[3] * 3) && tries++ < 300);
     return { x, y, a: Math.random() * Math.PI * 2, turn: 0, base: 0.8 + Math.random() * 0.5, pace: 0.8 + Math.random() * 0.5,
-      rest: 0, phase: Math.random() * 10, tone: 30 + Math.random() * 25, dark: 0, fade: 1 };
+      rest: 0, phase: Math.random() * 10, tone: 30 + Math.random() * 25, dark: 0, fade: 1, hid: 0, glint: Math.random() * 10 };
+  },
+  // what the game covers (cards, hands, portraits, panels): a coarse grid, looked at every second or two, so the
+  // spiders can keep out from under it - a spider nobody can see is wasted
+  scanCover() {
+    // (from the boxes of the solid things on the page - cards, pictures, buttons, panels with a background - rather
+    // than probing points, which is far too slow)
+    const cw = 40, ch = 24, W = this.W, H = this.H, g = new Uint8Array(cw * ch);
+    for (const e of document.body.querySelectorAll("*")) {
+      if (e === this.canvas || e.tagName === "SCRIPT" || e.tagName === "STYLE") continue;
+      let solid = e.tagName === "IMG" || e.tagName === "BUTTON" || e.classList.contains("card");
+      if (!solid) {
+        const cs = getComputedStyle(e);
+        if (cs.backgroundImage !== "none") solid = true;
+        else { const m = cs.backgroundColor.match(/rgba?\(([^)]+)\)/); if (m) { const v = m[1].split(",").map(Number); solid = v.length < 4 || v[3] > 0.3; } }
+      }
+      if (!solid) continue;
+      const r = e.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4 || r.right < 0 || r.bottom < 0 || r.left > W || r.top > H) continue;
+      if (r.width >= W * 0.98 && r.height >= H * 0.98) continue;            // (something full-screen, behind it all)
+      const cs = getComputedStyle(e);
+      if (cs.visibility === "hidden" || +cs.opacity < 0.3) continue;
+      const i0 = Math.max(0, Math.ceil(r.left / W * cw - 0.5)), i1 = Math.min(cw - 1, Math.floor(r.right / W * cw - 0.5));
+      const j0 = Math.max(0, Math.ceil(r.top / H * ch - 0.5)), j1 = Math.min(ch - 1, Math.floor(r.bottom / H * ch - 0.5));
+      for (let jj = j0; jj <= j1; jj++) for (let ii = i0; ii <= i1; ii++) g[jj * cw + ii] = 1;
+    }
+    this.cover = { cw, ch, g };
+  },
+  covered(x, y) {
+    const m = this.cover; if (!m) return false;
+    const i = Math.floor(x / this.W * m.cw), j = Math.floor(y / this.H * m.ch);
+    return i >= 0 && j >= 0 && i < m.cw && j < m.ch && m.g[j * m.cw + i] === 1;
   },
   // somewhere worth heading for: lit rock it can stand on, out from behind the cards in the middle
   goalSpot() {
@@ -357,7 +389,7 @@ const CAVE = {
     for (let i = 0; i < 12; i++) {
       const x = Math.random() * W, y = Math.random() * H;
       if (!this.walkable(x, y) || this.seenAt(x, y, 6)[3] < 0.045) continue;
-      if (Math.abs(x - W / 2) < W * 0.24 && Math.abs(y - H * 0.55) < H * 0.3) continue;
+      if (this.covered(x, y)) continue;
       return [x, y];
     }
     return null;
@@ -380,7 +412,12 @@ const CAVE = {
 
   update(dt) {
     const W = this.W, H = this.H, S = Math.min(W, H) / 900;
+    this.coverIn = (this.coverIn || 0) - dt;
+    if (this.coverIn <= 0) { this.scanCover(); this.coverIn = 1.5; }
     for (const s of this.spiders) {
+      // one the cards have come down on: after a while it's gone, and another comes out where it can be seen
+      s.hid = this.covered(s.x, s.y) ? s.hid + dt : 0;
+      if (s.hid > 3) { Object.assign(s, this.newSpider(), { fade: 0 }); continue; }
       if (s.rest > 0) { s.rest -= dt; continue; }
       s.turn += (Math.random() - 0.5) * 6 * dt; s.turn *= 0.96;
       s.a += s.turn * dt * 2;
@@ -395,6 +432,8 @@ const CAVE = {
       const nx = s.x + Math.cos(s.a) * sp * dt, ny = s.y + Math.sin(s.a) * sp * dt;
       // nothing to stand on there (the void, off the picture): turn back
       if (!this.walkable(nx, ny) || nx < 0 || nx > W || ny < 0 || ny > H) { s.a += Math.PI * (0.5 + Math.random()); s.turn = 0; s.goal = null; continue; }
+      // they keep out from under the table (where they can, they walk out from under it)
+      if (this.covered(nx, ny) && !this.covered(s.x, s.y) && Math.random() < 0.9) { s.a += Math.PI * (0.5 + Math.random()); s.turn = 0; s.goal = null; continue; }
       // they keep out of the deepest dark, mostly (it's a soft edge, like the end of the rock)
       const here = this.seenAt(nx, ny, 4)[3];
       if (here < 0.022 && Math.random() < 0.6 && here < this.seenAt(s.x, s.y, 4)[3]) { s.a += Math.PI * (0.4 + Math.random() * 0.6) * (Math.random() < 0.5 ? -1 : 1); s.turn = 0; continue; }
@@ -402,7 +441,7 @@ const CAVE = {
       s.dark = here < 0.03 ? s.dark + dt : 0;
       if (s.dark > 15) { Object.assign(s, this.newSpider(), { fade: 0 }); continue; }
       s.x = nx; s.y = ny;
-      s.phase += dt * 9 * s.pace;
+      s.phase += dt * 9 * s.pace; s.glint += dt;
       if (Math.random() < dt * 0.12) s.rest = 0.4 + Math.random() * 2.2;
     }
     this.updateDrips(dt);
@@ -450,19 +489,25 @@ const CAVE = {
     this.drawQueen(c, t);
     this.drawFox(c);
     const S = Math.min(this.W, this.H) / 900;
-    for (const s of this.spiders) {
-      const k = this.scaleAt(s.x, s.y);
-      if (s.fade < 1) c.globalAlpha = s.fade;
-      this.drawSpider(c, s.x, s.y, s.a + Math.PI / 2, 15 * S * k * s.base, s.rest > 0 ? 0 : s.phase, s.tone);
-      c.globalAlpha = 1;
-    }
+    // the far ones sink into the mist; the near ones walk over it
+    const crawl = near => {
+      for (const s of this.spiders) {
+        if ((this.depth(s.x, s.y) > 0.3) !== near || this.covered(s.x, s.y)) continue;
+        const k = this.scaleAt(s.x, s.y);
+        if (s.fade < 1) c.globalAlpha = s.fade;
+        this.drawSpider(c, s.x, s.y, s.a + Math.PI / 2, 19 * S * k * s.base, s.rest > 0 ? 0 : s.phase, s.tone, false, s.glint);
+        c.globalAlpha = 1;
+      }
+    };
+    crawl(false);
     this.drawMist(c, this.still ? 0 : t);
+    crawl(true);
     this.drawDrips(c);
     for (const d of this.danglers) {
-      const x = d.x + Math.sin(d.sway * 0.9) * 3, sz = 15 * S * d.k;
+      const x = d.x + Math.sin(d.sway * 0.9) * 3, sz = 19 * S * d.k;
       c.strokeStyle = "rgba(200,195,190,0.28)"; c.lineWidth = 0.7;
       c.beginPath(); c.moveTo(d.x, 0); c.lineTo(x, d.y); c.stroke();
-      this.drawSpider(c, x, d.y + sz, Math.PI, sz, d.state === "hang" ? 0 : d.sway * 4, 40, true);
+      this.drawSpider(c, x, d.y + sz, Math.PI, sz, d.state === "hang" ? 0 : d.sway * 4, 40, true, d.sway);
     }
   },
 
@@ -576,13 +621,13 @@ const CAVE = {
   // darker than whatever it's on - a silhouette on lit rock, all but lost in the shadows - with only what the light
   // there gives it: glints on its back and a thin gleam along the legs on the side the light comes from (in the
   // scene's terms, so they stay put as it turns), and a soft shadow where there's light to cast one
-  drawSpider(c, x, y, a, s, phase, tone, hanging = false) {
+  drawSpider(c, x, y, a, s, phase, tone, hanging = false, glint = 0) {
     let [R, G, B, lum] = this.seenAt(x, y, Math.max(2, s * 0.8));
     // even the darkest corner has a little cold light in it - enough for a faint gleam
     R = Math.max(R, 30); G = Math.max(G, 32); B = Math.max(B, 38);
     // and any foxfire nearby: its green light, and the light then comes from there as much as from above
     const [fr, fg, fb, fvx, fvy] = this.fox ? this.foxLight(x, y) : [0, 0, 0, 0, 0];
-    R += fr; G += fg; B += fb; lum += (fr + fg + fb) / 765;
+    R += fr * 0.3; G += fg * 0.3; B += fb * 0.3; lum += (fr + fg + fb) / 765 * 0.5;   // a tinge on it; the glints catch more
     const L = Math.max(0.32, Math.min(1, lum * 3.2));                                   // how lit it is here (0 dark - 1 well lit)
     let [dx, dy] = this.seenDir(x, y);
     const fw = Math.min(1, Math.hypot(fvx, fvy) * 1.5);
@@ -591,8 +636,8 @@ const CAVE = {
       dx = dx * (1 - fw) + fvx / fl * fw; dy = dy * (1 - fw) + fvy / fl * fw;
       const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n;
     }
-    const k = 0.4 + tone / 300;                                         // its own darkness against the rock (0.5-0.58)
-    const dark = `rgb(${Math.round(R * k * 0.55 + 3)},${Math.round(G * k * 0.5 + 2)},${Math.round(B * k * 0.48 + 2)})`;
+    const k = 0.75 + tone / 250;                                        // a pale-ish cave spider: about as light as the rock (0.87-0.97)
+    const dark = `rgb(${Math.round(R * k + 9)},${Math.round(G * k * 0.88 + 6)},${Math.round(B * k * 0.74 + 4)})`;
     const lit = (f, al) => `rgba(${Math.round(Math.min(255, R * f + 12))},${Math.round(Math.min(255, G * f + 12))},${Math.round(Math.min(255, B * f + 14))},${al})`;
     const ca = Math.cos(a), sa = Math.sin(a);
     const W = (px, py) => [px * ca - py * sa, px * sa + py * ca];      // its own frame -> the scene's
@@ -647,6 +692,20 @@ const CAVE = {
     };
     dome(0, s * 0.75, s * 0.6, s * 0.78, 0.45);
     dome(0, -s * 0.25, s * 0.38, s * 0.4, 0.4);
+    // eyeshine: its eyes throw the light back, as a wolf spider's do in a torch beam - brightest when it faces us
+    // (walking down the screen) or the light; a faint pair of pinpoints even in the dark, flaring as it turns
+    const [hx, hy] = W(0, -1), face = Math.max(0, hy) * 0.6 + Math.max(0, hx * dx + hy * dy) * 0.4;
+    const shine = Math.min(1, 0.22 + 0.78 * face ** 2) * (0.85 + 0.15 * Math.sin(glint * 2.3));
+    const er = Math.max(0.6, s * 0.075);
+    c.globalCompositeOperation = "lighter";
+    for (const ex of [-1, 1]) {
+      const [px, py] = W(ex * s * 0.1, -s * 0.56);
+      const g = c.createRadialGradient(px, py, 0, px, py, er * 2.2);
+      g.addColorStop(0, `rgba(${Math.round(150 + fr)},${Math.round(200 + Math.min(55, fg))},${Math.round(170 + fb * 0.5)},${(0.85 * shine).toFixed(3)})`);
+      g.addColorStop(0.4, `rgba(90,150,120,${(0.35 * shine).toFixed(3)})`); g.addColorStop(1, "rgba(40,80,60,0)");
+      c.fillStyle = g; c.beginPath(); c.arc(px, py, er * 2.2, 0, Math.PI * 2); c.fill();
+    }
+    c.globalCompositeOperation = "source-over";
     c.restore();
   }
 };
