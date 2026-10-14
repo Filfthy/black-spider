@@ -599,9 +599,10 @@ const CAVE = {
     c.save();
     c.translate(x, y);
     if (!hanging && L > 0.05) {
-      c.fillStyle = `rgba(0,0,0,${0.45 * L})`; c.filter = `blur(${Math.max(1, s * 0.35)}px)`;
-      c.beginPath(); c.ellipse(-dx * s * 0.45, -dy * s * 0.45 + s * 0.2, s * 1.3, s * 1.0, 0, 0, Math.PI * 2); c.fill();
-      c.filter = "none";
+      // (a soft gradient, not a blur filter: far cheaper with a lot of spiders)
+      const sx = -dx * s * 0.45, sy = -dy * s * 0.45 + s * 0.2, sh = c.createRadialGradient(sx, sy, 0, sx, sy, s * 1.6);
+      sh.addColorStop(0, `rgba(0,0,0,${0.45 * L})`); sh.addColorStop(0.55, `rgba(0,0,0,${0.22 * L})`); sh.addColorStop(1, "rgba(0,0,0,0)");
+      c.fillStyle = sh; c.beginPath(); c.ellipse(sx, sy, s * 1.6, s * 1.25, 0, 0, Math.PI * 2); c.fill();
     }
     // the legs: two segments each, dark; a thin gleam on the lit side of the segments that lie across the light
     const lw = Math.max(0.7, s * 0.14), gleams = [];
