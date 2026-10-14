@@ -120,3 +120,11 @@ body.back-spider .card.back[data-crease]::after {
   #splash .bs-logo-img { max-height: 46vh; }
   #start-panel .bs-logo-img.start-title-img { max-height: 4.5em; }
 }
+
+/* the Cave table (bs-cave.js draws it on #cave-bg) */
+body.table-cave { background: transparent !important; --ui-rgb: 24, 16, 11; --ui-accent: #a87a52; --ui-accent-rgb: 168, 122, 82; --ui-accent-hi: #c0915f; --ui-soft: rgb(232, 196, 150); --ui-soft-rgb: 232, 196, 150; }
+html:has(body.table-cave) { background-color: #0c0806; }
+#cave-bg { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; display: none; }
+.seg-tables .sw-cave { background: radial-gradient(circle at 18% 22%, rgba(215,205,190,0.35) 0 1px, transparent 2px),
+  repeating-conic-gradient(from 0deg at 0 0, rgba(215,205,190,0.25) 0 1deg, transparent 1deg 12deg),
+  radial-gradient(ellipse at 50% 60%, #3a2a1e, #0c0806) !important; color: #e8d6b8 !important; }
