@@ -146,10 +146,5 @@ body.table-cave .scorecard-panel table, body.table-cave .scorecard-panel th, bod
   background: none !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
 }
 body.table-cave #end-panel, body.table-cave .scorecard-panel { text-shadow: 0 0 1px #000, 0 0 2px #000, 0 0 4px #000, 0 1px 3px #000; }
-/* with no box of their own, the round summary and the scorecard would show the table through them (nameplates
-   over the title...): on the Cave the table fades away while they're open, leaving just the cave behind */
-body.table-cave #game-area { transition: opacity 0.35s ease; }
-body.table-cave:has(#end-overlay[style*="flex"]) #game-area,
-body.table-cave:has(#scorecard[style*="flex"]) #game-area { opacity: 0; pointer-events: none; }
 /* Cormorant's figures default to old-style (a "1" like a small "I"): use full-height ones everywhere */
 body { font-variant-numeric: lining-nums; }
