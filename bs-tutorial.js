@@ -7,10 +7,7 @@ const TUTORIAL = {
   opponents: ["Persephone", "Bub", "Lilith"],
   firstDealer: 3,
   intro: [
-    "Welcome to <b>Black Spider</b>. It's a trick-taking game where you want to take as <b>few points</b> as you can.",
-    "The deck has 60 cards: red, blue, purple and green, each numbered 1 to 11, and black. Black has six 7s: the <b>Black Spiders</b>.",
-    "The small number under a card's number is what it scores if you take it in a trick. Black cards score points (bad). Each Black Spider is 10!",
-    "The coloured 7s score <b>−5</b>: those are worth taking. Lowest total at the end wins."
+    "Welcome to <b>Black Spider</b>: take as <b>few points</b> as you can. Let's play a hand."
   ],
   rounds: [{
     hands: [
@@ -27,35 +24,28 @@ const TUTORIAL = {
     ],
     coach: {
       start: [
-        { t: "Here's your hand: 15 cards each with four players. Before every hand, everyone passes three cards. This hand they go to the <b>left</b>, to Persephone.", spot: "#player-hand" },
-        "Pass the cards you least want. You have two Black Spiders: pass one, with your <b>black 11</b> (5 points)…",
-        "…and your only blue card, the <b>blue 11</b>. With no blue left, whenever blue is led you can't follow, and can throw away anything you like."
+        { t: "Your hand. The small number under each card is what it scores if you take it: black cards are bad, and a <b>Black Spider</b> (black 7) is 10. Coloured 7s are <b>−5</b>: good to take.", spot: "#player-hand" }
       ],
-      pass: { t: "Click the <b>Black Spider</b> (black 7), the <b>black 11</b> and the <b>blue 11</b>, then press <b>Pass these three</b>." },
+      pass: { t: "First everyone passes three cards, this hand to the <b>left</b>. Pass a <b>Black Spider</b>, the <b>black 11</b> and the <b>blue 11</b> (your only blue: with none left, you can throw anything on blue). Then press <b>Pass these three</b>." },
       passed: [
-        { t: "Lilith passed you three cards: the ones lifted in your hand. She gave you some high cards, which are more likely to win tricks you don't want.", spot: "#player-hand" }
+        { t: "The lifted cards are the three Lilith passed you.", spot: "#player-hand" }
       ],
-      play0: { t: "Whoever has the <b>red 1</b> leads it to the first trick. That's you: play the red 1." },
+      play0: { t: "The <b>red 1</b> leads the first trick. Play it." },
       trick0: [
-        "If you have the colour that was led, you must follow it, though you may play a card of the <b>same number</b> instead. Persephone followed with red; Bub played a <b>green 1</b> instead, matching the number.",
-        "The highest card <b>of the colour led</b> wins. Bub's green 1 could never win, as green wasn't led. Lilith's red 9 won, and she leads next.",
-        "One more thing about the first trick: <b>no black cards</b> may be played on it, unless you have nothing else."
+        "Follow the colour led if you can, or play the <b>same number</b> instead (Bub's green 1). The highest card of the colour led wins: Lilith's red 9. No black on the first trick."
       ],
-      play1: { t: "Blue 4 is led. You have no blue, so you may play anything. Drop your <b>Black Spider</b> on it!" },
+      play1: { t: "Blue is led and you have none, so play anything: drop your <b>Black Spider</b>!" },
       trick1: [
-        "Bub's blue 8 was the highest blue, so Bub takes the trick, and your Black Spider with it: 10 points to Bub. Look at his face.",
-        "Black can't be led until it's <b>broken</b>, by someone playing a black card on a trick where another colour was led. Your Black Spider just broke it: from now on black may be led."
+        "Bub's blue 8 wins, so he takes your Black Spider: 10 points. That also <b>broke</b> black: black can't be led until someone plays it on another colour."
       ],
-      play2: { t: "Purple 5 is led, and you have purple. Persephone will play her <b>purple 7</b>, worth −5. Win the trick with your <b>purple 11</b> and take it." },
+      play2: { t: "Purple is led. Win it with your <b>purple 11</b>: if anyone plays a coloured 7 on it (−5), it's yours." },
       trick2: [
-        "You took the purple 7: <b>−5</b> for you. Your points this hand show by your name.",
-        "Now play the rest of the hand yourself. Remember: follow the colour (or match the number), duck under the winning card when you can, and dump your worst cards when you can't follow."
+        "Persephone played her <b>purple 7</b>: <b>−5</b> for you. Now play the rest yourself: follow when you must, duck under the winning card, and dump black when you can't follow."
       ],
-      end: { t: "That's a hand. Points add up over the hands, and the game ends when someone reaches the target (150 with four players). Lowest score wins." }
+      end: { t: "That's a hand. Scores add up until someone reaches the target. Lowest wins." }
     }
   }],
   outro: [
-    "That's Black Spider! Take a <b>sweep</b> (all 16 black cards) and you score 0 while everyone else scores 60, but it's a risky business.",
-    "Choose how many players and how good your opponents are, then press <b>Play</b>. The rules are always under the book button."
+    "Take all 16 black cards (the <b>sweep</b>) and you score 0, everyone else 60. Choose your players and press <b>Play</b>. The rules are under the book button."
   ]
 };

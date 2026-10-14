@@ -1078,6 +1078,10 @@ class GameController {
 
   startTutorial() {
     const T = TUTORIAL;
+    // (the offer of the tutorial has done its job)
+    const offer = document.getElementById("tut-offer");
+    if (offer) offer.style.display = "none";
+    this.markTutorialSeen();
     this.epoch++;
     this.clearPick();
     this.busy = false;
