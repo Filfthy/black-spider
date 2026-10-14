@@ -133,3 +133,9 @@ body.table-cave #bid-panel { background: none !important; box-shadow: none !impo
 body.table-cave #bid-panel #bid-title, body.table-cave #bid-panel #bid-note {
   text-shadow: 0 0 1px #000, 0 0 2px #000, 0 0 3px #000, 0 1px 2px #000;
 }
+/* on the Cave the messages (a Black Spider taken...) are just words, so they don't blot out the queen's eyes */
+body.table-cave .capture-toast.bs-toast {
+  background: none !important; border-color: transparent !important; box-shadow: none !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  text-shadow: 0 0 1px #000, 0 0 2px #000, 0 0 4px #000, 0 1px 3px #000;
+}
