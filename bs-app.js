@@ -1456,16 +1456,16 @@ class GameController {
     firstDealRadios.forEach(r => { r.checked = (r.value === this.firstDealMode); });
     lengthRadios.forEach(r => { r.checked = (r.value === this.length); });
     // Table surface (applied immediately, remembered). The Souls table to begin with.
-    const TABLES = ["cave", "green", "red", "blue", "walnut", "mahogany", "tavern", "marble"];   // (no Souls table here)
+    const TABLES = ["cave", "green", "red", "blue", "walnut", "mahogany", "tavern", "marble", "souls"];
     const applyTable = (t) => {
       TABLES.forEach(x => document.body.classList.remove("table-" + x));
       document.body.classList.add("table-" + t);
+      try { if (typeof SOULS !== "undefined") SOULS.setActive(t === "souls"); } catch (e) { /* ignore */ }
       try { if (typeof CAVE !== "undefined") { CAVE.onDrip = v => this.sfxDrip(v); CAVE.setActive(t === "cave"); } } catch (e) { /* ignore */ }
     };
     let table = "cave";
     try {
       const t = localStorage.getItem("bs_table"); if (TABLES.includes(t)) table = t;
-      if (t === "souls") { table = "cave"; localStorage.setItem("bs_table", "cave"); }   // the Souls table has gone: the Cave instead
       // (the cave arrived after the first test games: whoever was on the old default moves to it, once)
       if (!localStorage.getItem("bs_tableCave")) { if (t === "souls") table = "cave"; localStorage.setItem("bs_tableCave", "1"); }
     } catch (e) { /* ignore */ }
